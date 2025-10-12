@@ -26,6 +26,8 @@
 
 #include "arch_console.h"
 
+#include "user_config.h"
+
 #if defined(__IS_SDK6_COMPILER_GCC__) && !defined(__clang__)
 #pragma message("Please note that SDK6 GCC support will be deprecated in the next SDK6 release")
 #endif

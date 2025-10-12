@@ -1,0 +1,28 @@
+{
+    "configurations": [
+        {
+            "name": "Windows",
+            "includePath": [
+                "./sdk/**",
+                "./third_party/**",
+                "./projects/**"
+            ],
+            "defines": [
+                "CFG_BLE",
+                "CFG_HOST",
+                "CFG_APP",
+                "CFG_ALLROLES",
+                "CFG_PRF_PXPR",
+                "BLE_PROX_REPORTER",
+                "DA14585",
+                "__DA14585__"
+            ],
+            "compilerPath": "c:\\Program Files (x86)\\Arm GNU Toolchain arm-none-eabi\\11.3 rel1\\bin\\arm-none-eabi-gcc.exe",
+            "cStandard": "c99",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "gcc-x86"
+        }
+    ],
+    "version": 4,
+    "enableConfigurationSquiggles": true
+}

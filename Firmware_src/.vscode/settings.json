@@ -1,0 +1,15 @@
+{
+    "files.associations": {
+        "gapc_task.h": "c",
+        "timer0_2.h": "c",
+        "gattc_task.h": "c",
+        "app_easy_msg_utils.h": "c",
+        "wkupct_quadec.h": "c",
+        "gpio.h": "c",
+        "winapifamily.h": "c",
+        "stdint.h": "c",
+        "user_config.h": "c",
+        "app_suotar.h": "c"
+    },
+    "C_Cpp.default.compilerPath": "c:\\Program Files (x86)\\Arm GNU Toolchain arm-none-eabi\\11.3 rel1\\bin\\arm-none-eabi-gcc.exe"
+}

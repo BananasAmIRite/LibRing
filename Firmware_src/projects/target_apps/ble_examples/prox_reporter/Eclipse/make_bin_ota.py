@@ -59,4 +59,4 @@ def add_header_to_file(input_file, output_file):
     with open(output_file, "wb") as f:
         f.write(combined_content)
 
-add_header_to_file("prox_reporter.bin", "..\output.bin")
+add_header_to_file("prox_reporter.bin", "../output.bin")
