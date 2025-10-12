@@ -28,38 +28,13 @@
 
 #include "user_config.h"
 
+#include "leds.c"
+
 #if defined(__IS_SDK6_COMPILER_GCC__) && !defined(__clang__)
 #pragma message("Please note that SDK6 GCC support will be deprecated in the next SDK6 release")
 #endif
 
 
-typedef struct led_gpios
-{
-        GPIO_PORT port;
-        GPIO_PIN pin;
-}led_gpios;
-
-static led_gpios theLedGpiosLow[] = {
-        {GPIO_PORT_2, GPIO_PIN_1},
-        {GPIO_PORT_1, GPIO_PIN_3},
-        {GPIO_PORT_2, GPIO_PIN_0},
-        {GPIO_PORT_1, GPIO_PIN_2},
-        {GPIO_PORT_1, GPIO_PIN_0},
-        {GPIO_PORT_1, GPIO_PIN_1},
-        {GPIO_PORT_0, GPIO_PIN_2},
-};
-
-static led_gpios theLedGpiosHigh[] = {
-        {GPIO_PORT_2, GPIO_PIN_8},
-        {GPIO_PORT_2, GPIO_PIN_7},
-        {GPIO_PORT_2, GPIO_PIN_6},
-        {GPIO_PORT_2, GPIO_PIN_5},
-        {GPIO_PORT_2, GPIO_PIN_2},
-        {GPIO_PORT_2, GPIO_PIN_9},
-};
-
-
-const uint8_t numbers[] = {0x77,0x24,0x5D,0x6D,0x2E,0x6B,0x7B,0x25,0x7F,0x6F,0x3F,0x3A,0x53,0x7C,0x5B,0x1B};
 
 uint8_t LED_Buffer[6] = {0x00,0x00,0x00,0x00,0x00,0x00};
 
@@ -95,10 +70,7 @@ void LED_GPIO_mode(uint8_t mode)
                         LED_Display_state = 1;
                         calcTime();
                         turnOnTime = realUnix;
-                        for (int i = 0; i < (sizeof(theLedGpiosLow)/sizeof(led_gpios)); ++i )
-                                GPIO_ConfigurePin(theLedGpiosLow[i].port, theLedGpiosLow[i].pin, OUTPUT, PID_GPIO, 0);
-                        for (int i = 0; i < (sizeof(theLedGpiosHigh)/sizeof(led_gpios)); ++i )
-                                GPIO_ConfigurePin(theLedGpiosHigh[i].port, theLedGpiosHigh[i].pin, OUTPUT, PID_GPIO, 1);
+                        LED_Pin_Config(true);
                         // Here we enable the Timer
                         arch_force_active_mode();
                         timer0_enable_irq();
@@ -108,30 +80,13 @@ void LED_GPIO_mode(uint8_t mode)
                 if(LED_Display_state != 0)
                 {
                         LED_Display_state = 0;
-                        for (int i = 0; i < (sizeof(theLedGpiosLow)/sizeof(led_gpios)); ++i )
-                                GPIO_ConfigurePin(theLedGpiosLow[i].port, theLedGpiosLow[i].pin, INPUT_PULLDOWN, PID_GPIO, 0);
-                        for (int i = 0; i < (sizeof(theLedGpiosHigh)/sizeof(led_gpios)); ++i )
-                                GPIO_ConfigurePin(theLedGpiosHigh[i].port, theLedGpiosHigh[i].pin, INPUT_PULLDOWN, PID_GPIO, 1);
+                        LED_Pin_Config(false);
                         // Here we disable the Timer
                         timer0_disable_irq();
                         timer0_stop();
                         arch_restore_sleep_mode();
                 }
         }
-}
-
-void LED_Buff_setInt(uint32_t inputNum, unsigned char *LED_Buf, int lenInt) {
-    uint8_t v19[5] = {0};
-    int i;
-    uint32_t v4 = 1;
-    if (lenInt > 5) lenInt = 5;
-    for (i = lenInt - 1; i >= 0; i--) {
-        v19[i] = (inputNum / v4) % 10;
-        v4 *= 10;
-    }
-    for (i = 0; i < lenInt; i++) {
-        LED_Buf[i] = numbers[v19[i]];
-    }
 }
 
 void refreshMenu()
@@ -147,8 +102,9 @@ void refreshMenu()
 
 static void timer_cb(void)
 {
-        if(LED_Display_state){
-                GPIO_SetActive( theLedGpiosHigh[current_line].port, theLedGpiosHigh[current_line].pin );
+        if(LED_Display_state) {
+            // on each timer callback, swap LED lines so that each line is written to
+            // after each line has been written to, refresh the menu
                 current_line++;
                 current_line%=6;
                 if(current_line == 0)
@@ -156,25 +112,17 @@ static void timer_cb(void)
                         counter_ms++;
                         if(counter_ms >=55)// every 495ms
                         {
-                                counter_ms = 0;
-                                counter_time++;
-                                arch_printf("Time %i MS: %i\r\n", realUnix, lld_evt_time_get());
-                                //if(realUnix - turnOnTime >= 10)
-                                 //       LED_GPIO_mode(0);
-
+                            counter_ms = 0;
+                            counter_time++;
+                            arch_printf("Time %i MS: %i\r\n", realUnix, lld_evt_time_get());
+                            //if(realUnix - turnOnTime >= 10)
+                                //       LED_GPIO_mode(0);
                         }
                         memset(LED_Buffer,0x00,sizeof(LED_Buffer));
                         refreshMenu();
+                }
 
-                }
-                for(int i =0;i<7;i++)
-                {
-                        if((LED_Buffer[current_line] >> i) & 1)
-                               GPIO_SetActive( theLedGpiosLow[i].port, theLedGpiosLow[i].pin );
-                        else
-                               GPIO_SetInactive( theLedGpiosLow[i].port, theLedGpiosLow[i].pin );
-                }
-                GPIO_SetInactive( theLedGpiosHigh[current_line].port, theLedGpiosHigh[current_line].pin );
+                LED_write(&LED_Buffer, current_line);
         }
 }
 
@@ -219,7 +167,6 @@ static void app_resume_system_from_sleep(void)
         app_easy_wakeup();
     }
 }
-
 
 void user_app_on_init(void)
 {
