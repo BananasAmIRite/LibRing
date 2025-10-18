@@ -19,7 +19,8 @@
         "gattm_task.h": "c",
         "accelerometer.h": "c",
         "leds.h": "c",
-        "timer0.h": "c"
+        "timer0.h": "c",
+        "math.h": "c"
     },
     "C_Cpp.default.compilerPath": "c:\\Program Files (x86)\\Arm GNU Toolchain arm-none-eabi\\11.3 rel1\\bin\\arm-none-eabi-gcc.exe"
 }

@@ -75,13 +75,91 @@ bool accel_cmd_readaccel(accel_data_t *accel_out) {
     }
 
     // compute actual accelerations
-    uint16_t accel_x = (uint16_t)((accel_raw[1] << 8) | accel_raw[0]); // X_HIGH concatenated with X_LOW
-    uint16_t accel_y = (uint16_t)((accel_raw[3] << 8) | accel_raw[2]); // Y_HIGH concatenated with U_LOW
-    uint16_t accel_z = (uint16_t)((accel_raw[5] << 8) | accel_raw[4]); // Z_HIGH concatenated with Z_LOW
+    int16_t accel_x = (int16_t)((accel_raw[1] << 8) | accel_raw[0]); // X_HIGH concatenated with X_LOW
+    int16_t accel_y = (int16_t)((accel_raw[3] << 8) | accel_raw[2]); // Y_HIGH concatenated with U_LOW
+    int16_t accel_z = (int16_t)((accel_raw[5] << 8) | accel_raw[4]); // Z_HIGH concatenated with Z_LOW
 
     accel_out->x = accel_x; 
     accel_out->y = accel_y; 
     accel_out->z = accel_z;
 
     return true;
+}
+
+bool accel_cmd_get_sensitivity(accel_sensitivity_t* sensitivity_out) {
+    uint8_t ctrl4_reg = 0x23; 
+    i2c_abort_t abort_code; 
+    
+    // write register address
+    i2c_master_transmit_buffer_sync(&ctrl4_reg, 1, &abort_code, I2C_F_NONE);
+    if (abort_code != I2C_ABORT_NONE) {
+        arch_printf("Error writing register address: %d\r\n", abort_code);
+        return false;
+    }
+    
+    // read the register value
+    uint8_t ctrl4_value;
+    i2c_master_receive_buffer_sync(&ctrl4_value, 1, &abort_code, I2C_F_WAIT_FOR_STOP);
+    if (abort_code != I2C_ABORT_NONE) {
+        arch_printf("Error reading sensitivity: %d\r\n", abort_code);
+        return false;
+    }
+
+    *sensitivity_out = (ctrl4_value >> 4) & 0b11; 
+    return true; 
+}
+
+bool accel_cmd_set_sensitivity(accel_sensitivity_t sensitivity) {
+    uint8_t ctrl4_reg = 0x23; 
+    i2c_abort_t abort_code; 
+    
+    // write register address
+    i2c_master_transmit_buffer_sync(&ctrl4_reg, 1, &abort_code, I2C_F_NONE);
+    if (abort_code != I2C_ABORT_NONE) {
+        arch_printf("Error writing register address: %d\r\n", abort_code);
+        return false;
+    }
+    
+    // read register value
+    uint8_t ctrl4_value;
+    i2c_master_receive_buffer_sync(&ctrl4_value, 1, &abort_code, I2C_F_WAIT_FOR_STOP);
+    if (abort_code != I2C_ABORT_NONE) {
+        arch_printf("Error reading sensitivity: %d\r\n", abort_code);
+        return false;
+    }
+
+    uint8_t modified = (ctrl4_value & ~(0b11 << 4)) | sensitivity << 4; 
+
+    uint8_t new_conf[2] = {ctrl4_reg, modified}; 
+    i2c_master_transmit_buffer_sync(new_conf, 2, &abort_code, I2C_F_NONE); 
+
+    if (abort_code != I2C_ABORT_NONE) {
+        arch_printf("Error setting sensitivity: %d\r\n", abort_code);
+        return false;
+    }
+    
+    arch_printf("Sensitivity set to: %d\r\n", sensitivity);
+    return true;
+}
+
+uint8_t sensitivity_convert_to_mg(accel_sensitivity_t sensitivity) {
+        switch (sensitivity) {
+        case SENS_2G:  return 4;    // 2G range: 4 mg/LSB
+        case SENS_4G:  return 8;    // 4G range: 8 mg/LSB  
+        case SENS_8G:  return 16;   // 8G range: 16 mg/LSB
+        case SENS_16G: return 32;   // 16G range: 32 mg/LSB
+        default:       return 0;
+    }
+}
+
+void accel_convert_to_mg(accel_data_t *data, accel_sensitivity_t sensitivity) {
+    data->x >>= 6; 
+    data->y >>= 6; 
+    data->z >>= 6;
+
+    uint8_t sens = sensitivity_convert_to_mg(sensitivity);
+    
+    data->x *= sens; 
+    data->y *= sens; 
+    data->z *= sens; 
 }
