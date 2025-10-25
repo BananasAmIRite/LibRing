@@ -30,12 +30,31 @@
 
 #include "leds.h"
 
-#include "./accelerometer/ble/accel_service.h"
+// #include "./accelerometer/ble/accel_service.h"
 
 
 #if defined(__IS_SDK6_COMPILER_GCC__) && !defined(__clang__)
 #pragma message("Please note that SDK6 GCC support will be deprecated in the next SDK6 release")
 #endif
+
+static led_gpios theLedGpiosLow[] = {
+        {GPIO_PORT_2, GPIO_PIN_1},
+        {GPIO_PORT_1, GPIO_PIN_3},
+        {GPIO_PORT_2, GPIO_PIN_0},
+        {GPIO_PORT_1, GPIO_PIN_2},
+        {GPIO_PORT_1, GPIO_PIN_0},
+        {GPIO_PORT_1, GPIO_PIN_1},
+        {GPIO_PORT_0, GPIO_PIN_2},
+};
+
+static led_gpios theLedGpiosHigh[] = {
+        {GPIO_PORT_2, GPIO_PIN_8},
+        {GPIO_PORT_2, GPIO_PIN_7},
+        {GPIO_PORT_2, GPIO_PIN_6},
+        {GPIO_PORT_2, GPIO_PIN_5},
+        {GPIO_PORT_2, GPIO_PIN_2},
+        {GPIO_PORT_2, GPIO_PIN_9},
+};
 
 
 
@@ -105,43 +124,77 @@ void refreshMenu()
 
 static void timer_cb(void)
 {
-    static uint8_t accel_counter = 0; 
-        // if(LED_Display_state) {
-        //     // on each timer callback, swap LED lines so that each line is written to
-        //     // after each line has been written to, refresh the menu
-        //         current_line++;
-        //         current_line%=6;
-        //         if(current_line == 0)
-        //         {
-        //                 counter_ms++;
-        //                 if(counter_ms >=55)// every 495ms
-        //                 {
-        //                     counter_ms = 0;
-        //                     counter_time++;
-        //                     arch_printf("Time %i MS: %i\r\n", realUnix, lld_evt_time_get());
-        //                     //if(realUnix - turnOnTime >= 10)
-        //                         //       LED_GPIO_mode(0);
-        //                 }
-        //                 memset(LED_Buffer,0x00,sizeof(LED_Buffer));
-        //                 refreshMenu();
-        //         }
+    // static uint8_t accel_counter = 0; 
+        if(LED_Display_state) {
+            // on each timer callback, swap LED lines so that each line is written to
+            // after each line has been written to, refresh the menu
+                current_line++;
+                current_line%=6;
+                if(current_line == 0)
+                {
+                        counter_ms++;
+                        if(counter_ms >=55)// every 495ms
+                        {
+                            counter_ms = 0;
+                            counter_time++;
+                            arch_printf("Time %i MS: %i\r\n", realUnix, lld_evt_time_get());
+                            //if(realUnix - turnOnTime >= 10)
+                                //       LED_GPIO_mode(0);
+                        }
+                        memset(LED_Buffer,0x00,sizeof(LED_Buffer));
+                        refreshMenu();
+                }
 
-        //         LED_write(&LED_Buffer, current_line);
-        // }
-
-        if (++accel_counter >= 100) {
-            accel_counter = 0; 
-            accel_data_t out;
-            accel_sensitivity_t sens; 
-
-            if (!accel_cmd_readaccel(&out)) return;
-            if (!accel_cmd_get_sensitivity(&sens)) return;
-
-            accel_convert_to_mg(&out, sens); 
-
-            send_accel_data(&out);
+                LED_write(LED_Buffer, current_line);
         }
+
+        // if (++accel_counter >= 100) {
+        //     accel_counter = 0; 
+        //     accel_data_t out;
+        //     accel_sensitivity_t sens; 
+
+        //     if (!accel_cmd_readaccel(&out)) return;
+        //     if (!accel_cmd_get_sensitivity(&sens)) return;
+
+        //     accel_convert_to_mg(&out, sens); 
+
+        //     send_accel_data(&out);
+        // }
 }
+
+// static void timer_cb(void)
+// {
+//         if(LED_Display_state){
+//                 current_line++;
+//                 current_line%=6;
+//                 if(current_line == 0)
+//                 {
+//                         counter_ms++;
+//                         if(counter_ms >=55)// every 495ms
+//                         {
+//                                 counter_ms = 0;
+//                                 counter_time++;
+//                                 arch_printf("Time %i MS: %i\r\n", realUnix, lld_evt_time_get());
+//                                 //if(realUnix - turnOnTime >= 10)
+//                                  //       LED_GPIO_mode(0);
+
+//                         }
+//                         memset(LED_Buffer,0x00,sizeof(LED_Buffer));
+//                         refreshMenu();
+
+//                 }
+//                 uint8_t prev_line = (current_line + 5) % 6;
+//                 GPIO_SetActive( theLedGpiosHigh[prev_line].port, theLedGpiosHigh[prev_line].pin );
+//                 for(int i =0;i<7;i++)
+//                 {
+//                         if((LED_Buffer[current_line] >> i) & 1)
+//                                GPIO_SetActive( theLedGpiosLow[i].port, theLedGpiosLow[i].pin );
+//                         else
+//                                GPIO_SetInactive( theLedGpiosLow[i].port, theLedGpiosLow[i].pin );
+//                 }
+//                 GPIO_SetInactive( theLedGpiosHigh[current_line].port, theLedGpiosHigh[current_line].pin );
+//         }
+// }
 
 void start_refresh_timer(void)
 {
@@ -190,15 +243,15 @@ void user_app_on_init(void)
 
      default_app_on_init();
      arch_printf("Booted now\r\n");
-    //  LED_GPIO_mode(1);
+     LED_GPIO_mode(0);
 
-    if (accel_init()) { // init accelerometer
-        arch_printf("Accelerometer initialized\r\n");
-        accel_service_init(); // init acceleration BLE service
-        start_refresh_timer(); // start timer to broadcast acceleration information
-    } else {
-        arch_printf("Accelerometer init failed\r\n");
-    }
+    // if (accel_init()) { // init accelerometer
+    //     arch_printf("Accelerometer initialized\r\n");
+    //     accel_service_init(); // init acceleration BLE service
+    //     start_refresh_timer(); // start timer to broadcast acceleration information
+    // } else {
+    //     arch_printf("Accelerometer init failed\r\n");
+    // }
 }
 
 static void app_button_press_cb(void)
@@ -279,14 +332,14 @@ void user_app_on_disconnect(struct gapc_disconnect_ind const *param)
     }
 #endif
 
-    accel_service_on_disconnect();
+    // accel_service_on_disconnect();
 }
 
 void user_app_on_connect(uint8_t conidx, struct gapc_connection_req_ind const *param)
 {
     default_app_on_connection(conidx, param);
     arch_printf("BLE Connected\r\n");
-    accel_service_on_connect(conidx);
+    // accel_service_on_connect(conidx);
 }
 
 void app_advertise_complete(const uint8_t status)

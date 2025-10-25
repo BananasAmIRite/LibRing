@@ -51,7 +51,8 @@ void LED_Buff_setInt(uint32_t inputNum, unsigned char *LED_Buf, int lenInt) {
 }
 
 void LED_write(unsigned char *LED_Buffer, int line) {
-    GPIO_SetActive( theLedGpiosHigh[line].port, theLedGpiosHigh[line].pin );
+    uint8_t prev_line = (line + 5) % 6;
+    GPIO_SetActive( theLedGpiosHigh[prev_line].port, theLedGpiosHigh[prev_line].pin );
         for(int i =0;i<7;i++)
     {
             if((LED_Buffer[line] >> i) & 1)
