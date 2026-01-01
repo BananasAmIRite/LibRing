@@ -55,6 +55,7 @@
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.695125892" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler">
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths.1511250632" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/app_modules/api&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/app_modules/src/app_custs&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/platform/include/CMSIS/5.9.0/CMSIS/Core/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/ble_stack/controller/em&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/ble_stack/controller/llc&quot;"/>
@@ -106,6 +107,7 @@
 									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/ble_stack/profiles/cts/ctsc/api&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/ble_stack/profiles/cts/ctss/api&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/ble_stack/profiles/custom&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/ble_stack/profiles/custom/custs/src&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/ble_stack/profiles/custom/custs/api&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/ble_stack/profiles/dis/disc/api&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/ble_stack/profiles/dis/diss/api&quot;"/>
@@ -198,8 +200,8 @@
 									<listOptionValue builtIn="false" value="&quot;../../../../../../third_party/rand&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;../../../../../../sdk/platform/utilities/otp_hdr&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../src&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../src/custom_profile&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../src/accelerometer&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../src/accelerometer/ble&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../src/config&quot;"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.files.2063487453" name="Include files (-include)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.include.files" useByScannerDiscovery="false" valueType="includeFiles">

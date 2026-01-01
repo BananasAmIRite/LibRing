@@ -1,4 +1,3 @@
-
 #include "rwip_config.h"
 #include "gattc_task.h"
 #include "gapc_task.h"
@@ -30,8 +29,9 @@
 
 #include "leds.h"
 
-#include "./accelerometer/ble/accel_service.h"
 #include "./accelerometer/accelerometer.h"
+#include "custs1_task.h"
+#include "user_custs1_impl.h"
 
 
 #if defined(__IS_SDK6_COMPILER_GCC__) && !defined(__clang__)
@@ -178,21 +178,6 @@ static void timer_cb(void)
 
             LED_write(LED_Buffer, current_line);
     }
-
-
-
-        // if (++accel_counter >= 100) {
-        //     accel_counter = 0; 
-        //     accel_data_t out;
-        //     accel_sensitivity_t sens; 
-
-        //     if (!accel_cmd_readaccel(&out)) return;
-        //     if (!accel_cmd_get_sensitivity(&sens)) return;
-
-        //     accel_convert_to_mg(&out, sens); 
-
-        //     send_accel_data(&out);
-        // }
 }
 
 static void main_timer_cb(void) {
@@ -262,30 +247,10 @@ static void main_timer_cb(void) {
         // user_run = false; 
     } else if (user_state == BT_INIT) {
         LED_GPIO_mode(1);
-        uint8_t val = accel_service_init(); 
-
-        led_value = val; 
-
         user_run = false; 
     } else if (user_state == BT_NOTIF) {
         
-        // led_value = get_accel_char_hdl(); 
-
-        accel_data_t accel_data;
-        
-        // Read your accelerometer
-        bool out = accel_cmd_readaccel(&accel_data);
-
-        // led_value = out * 999; 
-
-        uint8_t val = update_accel_values(&accel_data); 
-
-        led_value = abs(accel_data.x); 
-        
-        // // Send BLE notification
-        // send_accel_data(&accel_data);
-        
-        // user_run = false;
+        user_run = false;
     } else {
         // stop running if invalid state
         user_run = false; 
@@ -348,19 +313,6 @@ void user_app_on_init(void)
     //  start_main_timer();
      arch_printf("Booted now\r\n");
      LED_GPIO_mode(0);
-
-
-    
-
-    // whoami_res = accel_cmd_whoami();
-
-    // if (accel_init()) { // init accelerometer
-    //     arch_printf("Accelerometer initialized\r\n");
-    //     accel_service_init(); // init acceleration BLE service
-    //     start_refresh_timer(); // start timer to broadcast acceleration information
-    // } else {
-    //     arch_printf("Accelerometer init failed\r\n");
-    // }
 }
 
 static void app_button_press_cb(void)
@@ -371,11 +323,6 @@ static void app_button_press_cb(void)
     if(GPIO_GetPinStatus(GPIO_BUTTON_PORT, GPIO_BUTTON_PIN))
             return;
     arch_printf("Button was just pressed\r\n");
-    // if(LED_Display_state){
-    //         LED_GPIO_mode(0);
-    // }else{
-    //         LED_GPIO_mode(1);
-    // }
 
     if (user_state == DEFAULT && !has_timer_started) {
         has_timer_started = true; 
@@ -454,14 +401,12 @@ void user_app_on_disconnect(struct gapc_disconnect_ind const *param)
     }
 #endif
 
-    accel_service_on_disconnect();
 }
 
 void user_app_on_connect(uint8_t conidx, struct gapc_connection_req_ind const *param)
 {
     default_app_on_connection(conidx, param);
     arch_printf("BLE Connected\r\n");
-    accel_service_on_connect(conidx);
 }
 
 void app_advertise_complete(const uint8_t status)
@@ -494,7 +439,13 @@ void user_catch_rest_hndl(ke_msg_id_t const msgid,
             KE_MSG_SEND(cfm);
         } break;
 
-        
+        #if (BLE_CUSTOM1_SERVER)
+        case CUSTS1_VAL_WRITE_IND:
+        {
+            struct custs1_val_write_ind const *ind = (struct custs1_val_write_ind const *)param;
+            user_custs1_wr_ind_handler(msgid, ind, dest_id, src_id);
+        } break;
+        #endif
 
         default:
             break;

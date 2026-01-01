@@ -30,7 +30,7 @@ noble.on('stateChange', (state) => {
 
 // Handle discovered devices
 noble.on('discover', async (peripheral) => {
-    // if (peripheral.advertisement.localName != 'TEST') return;
+    if (peripheral.advertisement.localName != 'TEST') return;
     console.log('\n--- Device Found ---');
     console.log('Address:', peripheral.address);
     console.log('Local Name:', peripheral.advertisement.localName || 'Unknown');
@@ -52,40 +52,91 @@ noble.on('discover', async (peripheral) => {
 
     const { services, characteristics } = await peripheral.discoverAllServicesAndCharacteristicsAsync();
 
+    console.log(services);
     // Find the service with UUID 0x3000
-    const targetService = services.find((service) => service.uuid === '3000');
+    const targetService = services.find((service) => service.uuid === '00112233445566778899aabbccddeeff');
 
     if (!targetService) {
-        console.log('Service 0x3000 not found');
+        console.log('Service 00112233445566778899aabbccddeeff not found');
         await peripheral.disconnectAsync();
         return;
     }
 
-    console.log('Found service 0x3000');
+    console.log('Found service 00112233445566778899aabbccddeeff');
 
     // Find the characteristic with UUID 0x3a00
-    const targetCharacteristic = characteristics.find((char) => char._serviceUuid === '3000' && char.uuid === '3a00');
+    const targetCharacteristic = characteristics.find(
+        (char) =>
+            char._serviceUuid === '00112233445566778899aabbccddeeff' && char.uuid === '2d86686a53dc25b30c4af0e10c8dee20'
+    );
 
     if (!targetCharacteristic) {
-        console.log('Characteristic 0x3a00 not found in service 0x3000');
+        console.log(
+            'Characteristic 2d86686a53dc25b30c4af0e10c8dee20 not found in service 00112233445566778899aabbccddeeff'
+        );
         await peripheral.disconnectAsync();
         return;
     }
 
-    console.log('Found characteristic 0x3a00');
+    console.log('Found characteristic 2d86686a53dc25b30c4af0e10c8dee20');
     console.log('Characteristic properties:', targetCharacteristic.properties);
+
+    // if (targetCharacteristic.properties.includes('notify')) {
+    //     targetCharacteristic.on('data', (data, isNotification) => {
+    //         console.log('Received data (hex):', data.toString('hex'));
+    //         console.log('Received data (bytes):', Array.from(data));
+
+    //         // // Parse as accelerometer data if length is appropriate
+    //         // if (data.length >= 6) {
+    //         //     const x = data.readInt16LE(0);
+    //         //     const y = data.readInt16LE(2);
+    //         //     const z = data.readInt16LE(4);
+    //         //     console.log('Parsed values - X:', x, 'Y:', y, 'Z:', z);
+    //         // }
+    //     });
+
+    //     await new Promise((resolve, reject) => {
+    //         targetCharacteristic.subscribe((error) => {
+    //             if (error) {
+    //                 console.error('Subscribe error:', error);
+    //                 reject(error);
+    //             } else {
+    //                 console.log('Successfully subscribed to notifications');
+    //                 resolve();
+    //             }
+    //         });
+    //     });
+    // }
 
     if (targetCharacteristic.properties.includes('read')) {
         const data = await new Promise((resolve, reject) => {
             targetCharacteristic.read((error, data) => {
-                if (error) reject(error);
-                else resolve(data);
+                if (error) {
+                    console.log(error);
+                    reject(error);
+                } else resolve(data);
             });
         });
 
         console.log(`data: ${data}`);
     } else {
         console.log('Characteristic does not support read operation');
+    }
+
+    if (targetCharacteristic.properties.includes('write')) {
+        const dataToWrite = Buffer.from([1]); // Boolean 1
+        await new Promise((resolve, reject) => {
+            targetCharacteristic.write(dataToWrite, false, (error) => {
+                if (error) {
+                    console.error('Write error:', error);
+                    return reject(error);
+                }
+                console.log('Wrote: ' + dataToWrite.toString('hex'));
+                resolve();
+            });
+        });
+    } else {
+        console.log('Characteristic does not support write operation');
     }
 
     await peripheral.disconnectAsync();

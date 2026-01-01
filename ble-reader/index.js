@@ -1,75 +1,97 @@
-async function scanForBLEDevices() {
-    // Check if Web Bluetooth is supported
-    if (!navigator.bluetooth) {
-        console.error('Web Bluetooth API is not supported in this browser');
-        return;
-    }
+const connectButton = document.getElementById('connect');
+const ledOnButton = document.getElementById('led-on');
+const ledOffButton = document.getElementById('led-off');
+const disconnectButton = document.getElementById('disconnect');
 
-    let device;
+let device;
+let server;
+let service;
+let characteristic;
 
+const serviceUuid = '00112233-4455-6677-8899-aabbccddeeff';
+const characteristicUuid = '2d86686a-53dc-25b3-0c4a-f0e10c8dee20';
+
+connectButton.addEventListener('click', async () => {
     try {
-        console.log('Requesting Bluetooth devices...');
+        if (!navigator.bluetooth) {
+            console.error('Web Bluetooth API is not supported in this browser');
+            alert('Web Bluetooth API is not supported in this browser');
+            return;
+        }
 
-        // Request devices - this will show a device picker dialog
+        console.log('Requesting Bluetooth devices...');
         device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [
-                'generic_access', // 0x1800
-                'generic_attribute', // 0x1801
-                'device_information', // 0x180A
-                'battery_service', // 0x180F
-                'heart_rate', // 0x180D
-                'health_thermometer', // 0x1809
-                'environmental_sensing', // 0x181A
-                '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART Service
-                '0000180f-0000-1000-8000-00805f9b34fb', // Battery Service
-                '0000180a-0000-1000-8000-00805f9b34fb',
-                0x3000,
-                0x3a00,
-            ], // Add specific service UUIDs if you know them
+            // acceptAllDevices: true,
+            filters: [{ name: 'TEST' }],
+            // optionalServices: [serviceUuid],
         });
 
         console.log('Selected device:', device.name || 'Unknown');
         console.log('Device ID:', device.id);
 
-        // Connect to the device
-        const server = await device.gatt.connect();
+        server = await device.gatt.connect();
         console.log('Connected to GATT server');
 
-        // Get primary services
-        const services = await server.getPrimaryServices();
-        console.log('Available services:', services);
+        service = await server.getPrimaryService(serviceUuid);
+        console.log('Service found:', service.uuid);
 
-        // services.forEach(service => {
-        //     console.log('Service UUID:', service.uuid);
-        // });
+        characteristic = await service.getCharacteristic(characteristicUuid);
+        console.log('Characteristic found:', characteristic.uuid);
 
-        const accelSvc = await server.getPrimaryService(0x3000);
+        connectButton.disabled = true;
+        ledOnButton.disabled = false;
+        ledOffButton.disabled = false;
+        disconnectButton.disabled = false;
 
-        console.log(accelSvc);
-
-        console.log(await accelSvc.getCharacteristics());
-
-        const accelChar = await accelSvc.getCharacteristic(0x3a00);
-
-        console.log(accelChar.value);
-
-        // await accelChar.startNotifications();
-
-        // accelChar.addEventListener('characteristicvaluechanged', (a) => {
-        //     console.log(a);
-        // });
-
-        // // Disconnect when done
-        device.gatt.disconnect();
-        console.log('Disconnected from device');
+        device.addEventListener('gattserverdisconnected', onDisconnected);
     } catch (error) {
-        console.error('Error scanning for devices:', error);
-        console.error(error.stack);
-
-        device.gatt.disconnect();
-        console.log('Disconnected from device');
+        console.error('Error connecting to device:', error);
     }
-}
+});
 
-document.getElementById('scan').addEventListener('click', () => scanForBLEDevices());
+ledOnButton.addEventListener('click', async () => {
+    if (!characteristic) {
+        return;
+    }
+    try {
+        const data = new Uint8Array([1]);
+        await characteristic.writeValue(data);
+        console.log('Wrote 1 to characteristic');
+    } catch (error) {
+        console.error('Error writing to characteristic:', error);
+    }
+});
+
+ledOffButton.addEventListener('click', async () => {
+    if (!characteristic) {
+        return;
+    }
+    try {
+        const data = new Uint8Array([0]);
+        await characteristic.writeValue(data);
+        console.log('Wrote 0 to characteristic');
+    } catch (error) {
+        console.error('Error writing to characteristic:', error);
+    }
+});
+
+disconnectButton.addEventListener('click', async () => {
+    if (device && device.gatt.connected) {
+        device.gatt.disconnect();
+    } else {
+        onDisconnected();
+    }
+});
+
+function onDisconnected() {
+    console.log('Disconnected from device');
+    device = null;
+    server = null;
+    service = null;
+    characteristic = null;
+
+    connectButton.disabled = false;
+    ledOnButton.disabled = true;
+    ledOffButton.disabled = true;
+    disconnectButton.disabled = true;
+}

@@ -220,6 +220,8 @@ void user_catch_rest_hndl(ke_msg_id_t const msgid,
                           ke_task_id_t const dest_id,
                           ke_task_id_t const src_id);
 
+void LED_GPIO_mode(uint8_t mode); 
+
 /// @} APP
 
 #endif // _USER_PROXR_H_
