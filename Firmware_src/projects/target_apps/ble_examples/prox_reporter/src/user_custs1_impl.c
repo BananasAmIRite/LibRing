@@ -83,10 +83,23 @@ void user_custs1_wr_ind_handler(ke_msg_id_t const msgid,
 	}
 }
 
-void update_accel_data(const accel_data_t *accel_data)
+uint8_t update_accel_data(const accel_sensitivity_t* sens, const accel_data_t *accel_data)
 {
+    // CRITICAL: Check if service is initialized first
+    struct custs1_env_tag *custs1_env = PRF_ENV_GET(CUSTS1, custs1);
+    if (custs1_env == NULL) {
+        return 12; // Service not initialized
+    }
+    
+    // CRITICAL: Check if task is in correct state (not busy)
+    // If busy, skip to avoid message queue overflow
+    ke_state_t state = ke_state_get(TASK_ID_CUSTS1);
+    if (state == CUSTS1_BUSY) {
+        return 11; // Task is busy processing another message, skip this update
+    }
+    
     // Prepare data buffer (6 bytes)
-    uint8_t data_buffer[6];
+    uint8_t data_buffer[7];
     
     if (accel_data != NULL) {
         // Pack real accelerometer data (big-endian format)
@@ -98,48 +111,108 @@ void update_accel_data(const accel_data_t *accel_data)
         data_buffer[5] = accel_data->z & 0xFF;
     } else {
         // Send test data if no accelerometer data provided
-        data_buffer[0] = 0x01;
-        data_buffer[1] = 0x02;
-        data_buffer[2] = 0x03;
-        data_buffer[3] = 0x04;
-        data_buffer[4] = 0x05;
-        data_buffer[5] = 0x06;
+        data_buffer[0] = 0x40;
+        data_buffer[1] = 0x00;
+        data_buffer[2] = 0x20;
+        data_buffer[3] = 0x00;
+        data_buffer[4] = 0xE0;
+        data_buffer[5] = 0x00;
+    }
+
+    if (sens != NULL) {
+        data_buffer[6] = *sens; 
+    } else {
+        data_buffer[6] = 0x07; 
     }
     
-    // // This sends a message to the CUSTS1 task, which will call attmdb_att_set_value()
-    // // in the correct task context (not from timer interrupt context)
-    // struct custs1_val_set_req *req = KE_MSG_ALLOC_DYN(CUSTS1_VAL_SET_REQ,
-    //                                                    TASK_ID_CUSTS1,
-    //                                                    TASK_APP,
-    //                                                    custs1_val_set_req,
-    //                                                    6);
+    // Use message-based approach
+    struct custs1_val_set_req *req = KE_MSG_ALLOC_DYN(CUSTS1_VAL_SET_REQ,
+                                                       prf_get_task_from_id(TASK_ID_CUSTS1),
+                                                       TASK_APP,
+                                                       custs1_val_set_req,
+                                                       DEF_SVC1_ACCEL_CHAR_LEN);
     
-    // if (req == NULL) {
-    //     return; // Allocation failed
-    // }
+    if (req == NULL) {
+        return 10; // Allocation failed - heap might be full
+    }
     
-    // // Set the message parameters
-    // req->conidx = 0;  // Connection index (0 for first/only connection)
-    // req->handle = SVC1_IDX_ACCEL_VAL;
-    // req->length = 6;
+    // Set the message parameters
+    req->conidx = 0;
+    req->handle = SVC1_IDX_ACCEL_VAL;
+    req->length = DEF_SVC1_ACCEL_CHAR_LEN;
     
-    // // Copy data to message
-    // memcpy(req->value, data_buffer, 6);
+    // Copy data to message
+    memcpy(req->value, data_buffer, DEF_SVC1_ACCEL_CHAR_LEN);
     
-    // // Send the message - CUSTS1 task will process it safely
-    // ke_msg_send(req);
+    // Send the message
+    ke_msg_send(req);
 
-      struct custs1_val_set_req *req = KE_MSG_ALLOC_DYN(CUSTS1_VAL_SET_REQ,
-                                                    prf_get_task_from_id(TASK_ID_CUSTS1),
-                                                    TASK_APP,
-                                                    custs1_val_set_req,
-                                                    6);
+    return 121; 
+}
 
-        req->handle = SVC1_IDX_ACCEL_VAL;
-        req->length = 6;
-        memcpy(req->value, data_buffer, 6);
+uint8_t notify_accel_data(const accel_sensitivity_t* sens, const accel_data_t *accel_data) {
 
-        ke_msg_send(req);
+    struct custs1_env_tag *custs1_env = PRF_ENV_GET(CUSTS1, custs1);
+    if (custs1_env == NULL) {
+        return 12; // Service not initialized
+    }
+    
+    // CRITICAL: Check if task is in correct state (not busy)
+    // If busy, skip to avoid message queue overflow
+    ke_state_t state = ke_state_get(TASK_ID_CUSTS1);
+    if (state == CUSTS1_BUSY) {
+        return 11; // Task is busy processing another message, skip this update
+    }
+
+
+    // Prepare data buffer (6 bytes)
+    uint8_t data_buffer[7];
+    
+    if (accel_data != NULL) {
+        // Pack real accelerometer data (big-endian format)
+        data_buffer[0] = accel_data->x >> 8;
+        data_buffer[1] = accel_data->x & 0xFF;
+        data_buffer[2] = accel_data->y >> 8;
+        data_buffer[3] = accel_data->y & 0xFF;
+        data_buffer[4] = accel_data->z >> 8;
+        data_buffer[5] = accel_data->z & 0xFF;
+    } else {
+        // Send test data if no accelerometer data provided
+        data_buffer[0] = 0x40;
+        data_buffer[1] = 0x00;
+        data_buffer[2] = 0x20;
+        data_buffer[3] = 0x00;
+        data_buffer[4] = 0xE0;
+        data_buffer[5] = 0x00;
+    }
+
+    if (sens != NULL) {
+        data_buffer[6] = *sens; 
+    } else {
+        data_buffer[6] = 0x07; 
+    }
+
+    // Use message-based approach
+    struct custs1_val_ntf_ind_req *req = KE_MSG_ALLOC_DYN(CUSTS1_VAL_NTF_REQ,
+                                                            prf_get_task_from_id(TASK_ID_CUSTS1),
+                                                            TASK_APP,
+                                                            custs1_val_ntf_ind_req,
+                                                            DEF_SVC1_ACCEL_CHAR_LEN);
+
+    if (req == NULL) {
+        return 10; // Allocation failed - heap might be full
+    }
+
+    req->conidx = 0; // Connection index (0 for first connection)
+    req->handle = SVC1_IDX_ACCEL_VAL;
+    req->length = DEF_SVC1_ACCEL_CHAR_LEN;
+    req->notification = true;
+
+    memcpy(req->value, data_buffer, DEF_SVC1_ACCEL_CHAR_LEN);
+
+    ke_msg_send(req); 
+
+    return 171; 
 }
 
 #endif //BLE_CUSTOM1_SERVER

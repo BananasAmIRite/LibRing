@@ -159,10 +159,13 @@ disconnectButton.addEventListener('click', async () => {
 function onDisconnected() {
     console.log('Disconnected from device');
 
-    // Stop plotting if active
-    if (plotInterval) {
-        clearInterval(plotInterval);
-        plotInterval = null;
+    // Stop notifications if active
+    if (accelCharacteristic) {
+        try {
+            accelCharacteristic.removeEventListener('characteristicvaluechanged', handleAccelNotification);
+        } catch (error) {
+            console.warn('Error removing notification listener:', error);
+        }
     }
 
     device = null;
@@ -179,68 +182,104 @@ function onDisconnected() {
     stopPlotButton.disabled = true;
 }
 
+const coordValToG = (coord, sens) => {
+    let sensMultiplier = 0;
+    // find sens multiplier in milli-Gs
+    switch (sens) {
+        case 0:
+            sensMultiplier = 1;
+            break;
+        case 1:
+            sensMultiplier = 2;
+            break;
+        case 2:
+            sensMultiplier = 4;
+            break;
+        case 3:
+        default:
+            sensMultiplier = 8;
+            break;
+    }
+    // convert to G's and apply multiplier
+    return sensMultiplier * 0.001 * coord;
+};
+
+function handleAccelNotification(event) {
+    try {
+        const value = event.target.value;
+
+        const sens = value.getInt8(6, true);
+
+        console.log('Sensitivity:', sens);
+
+        // Parse accelerometer data
+        let x, y, z;
+        x = coordValToG(value.getInt16(0, false) >> 4, sens);
+        y = coordValToG(value.getInt16(2, false) >> 4, sens);
+        z = coordValToG(value.getInt16(4, false) >> 4, sens);
+
+        console.log(`Accel - X: ${x.toFixed(2)}, Y: ${y.toFixed(2)}, Z: ${z.toFixed(2)}`);
+
+        // Add data to chart
+        const timestamp = new Date().toLocaleTimeString();
+        chart.data.labels.push(timestamp);
+        chart.data.datasets[0].data.push(x);
+        chart.data.datasets[1].data.push(y);
+        chart.data.datasets[2].data.push(z);
+
+        // Keep only last 30 data points
+        if (chart.data.labels.length > 30) {
+            chart.data.labels.shift();
+            chart.data.datasets[0].data.shift();
+            chart.data.datasets[1].data.shift();
+            chart.data.datasets[2].data.shift();
+        }
+
+        chart.update('none'); // Update without animation for better performance
+    } catch (error) {
+        console.error('Error processing accelerometer notification:', error);
+    }
+}
+
 startPlotButton.addEventListener('click', async () => {
     if (!accelCharacteristic) {
         console.error('Accelerometer characteristic not available');
         return;
     }
 
-    startPlotButton.disabled = true;
-    stopPlotButton.disabled = false;
+    try {
+        startPlotButton.disabled = true;
+        stopPlotButton.disabled = false;
 
-    // Read accelerometer data every 2 seconds
-    plotInterval = setInterval(async () => {
-        try {
-            const value = await accelCharacteristic.readValue();
+        // Subscribe to notifications
+        await accelCharacteristic.startNotifications();
+        console.log('Started accelerometer notifications');
 
-            // Assuming the data is sent as 3 floats (12 bytes) or 3 int16 (6 bytes)
-            // Adjust based on your firmware's data format
-            let x, y, z;
-
-            if (value.byteLength >= 12) {
-                // Float format (4 bytes each)
-                x = value.getFloat32(0, true); // true for little-endian
-                y = value.getFloat32(4, true);
-                z = value.getFloat32(8, true);
-            } else if (value.byteLength >= 6) {
-                // Int16 format (2 bytes each) - common for accelerometers
-                x = value.getInt16(0, true) / 100.0; // Adjust scaling as needed
-                y = value.getInt16(2, true) / 100.0;
-                z = value.getInt16(4, true) / 100.0;
-            } else {
-                console.warn('Unexpected data length:', value.byteLength);
-                return;
-            }
-
-            console.log(`Accel - X: ${x.toFixed(2)}, Y: ${y.toFixed(2)}, Z: ${z.toFixed(2)}`);
-
-            // Add data to chart
-            const timestamp = new Date().toLocaleTimeString();
-            chart.data.labels.push(timestamp);
-            chart.data.datasets[0].data.push(x);
-            chart.data.datasets[1].data.push(y);
-            chart.data.datasets[2].data.push(z);
-
-            // Keep only last 30 data points
-            if (chart.data.labels.length > 30) {
-                chart.data.labels.shift();
-                chart.data.datasets[0].data.shift();
-                chart.data.datasets[1].data.shift();
-                chart.data.datasets[2].data.shift();
-            }
-
-            chart.update('none'); // Update without animation for better performance
-        } catch (error) {
-            console.error('Error reading accelerometer data:', error);
-        }
-    }, 2000); // Read every 2 seconds
-});
-
-stopPlotButton.addEventListener('click', () => {
-    if (plotInterval) {
-        clearInterval(plotInterval);
-        plotInterval = null;
+        // Add event listener for notifications
+        accelCharacteristic.addEventListener('characteristicvaluechanged', handleAccelNotification);
+    } catch (error) {
+        console.error('Error starting notifications:', error);
         startPlotButton.disabled = false;
         stopPlotButton.disabled = true;
+    }
+});
+
+stopPlotButton.addEventListener('click', async () => {
+    if (!accelCharacteristic) {
+        return;
+    }
+
+    try {
+        // Remove event listener
+        accelCharacteristic.removeEventListener('characteristicvaluechanged', handleAccelNotification);
+
+        // Stop notifications
+        await accelCharacteristic.stopNotifications();
+        console.log('Stopped accelerometer notifications');
+
+        startPlotButton.disabled = false;
+        stopPlotButton.disabled = true;
+    } catch (error) {
+        console.error('Error stopping notifications:', error);
     }
 });

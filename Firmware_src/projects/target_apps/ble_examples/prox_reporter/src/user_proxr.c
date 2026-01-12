@@ -239,48 +239,56 @@ static void main_timer_cb(void) {
 
         accel_data_t data; 
 
-        accel_cmd_readaccel(&data); 
+        bool out = accel_cmd_readaccel(&data); 
 
         accel_convert_to_mg(&data, sens); 
 
         led_value = abs(data.y); 
+        // led_value = out; 
         // user_run = false; 
     } else if (user_state == BT_INIT) {
-            LED_GPIO_mode(0); 
         
-        accel_data_t data; 
+        // // Skip accelerometer reads - just send test data
+        // accel_data_t data; 
+        // accel_cmd_readaccel(&data); 
+        // accel_convert_to_mg(&data, sens); 
 
-        accel_cmd_readaccel(&data); 
+        // #if (BLE_CUSTOM1_SERVER)
+        //     uint8_t out = update_accel_data(&data);
+        //     led_value = out; 
+        // #endif
 
-        accel_convert_to_mg(&data, sens); 
-
-        #if (BLE_CUSTOM1_SERVER)
-            update_accel_data(&data); 
-            // update_accel_data(); 
-        #endif
-        // LED_GPIO_mode(1);
-        user_run = false; 
-    } else if (user_state == BT_NOTIF) {
         LED_GPIO_mode(0); 
+        arch_force_active_mode();
         
-        accel_data_t data; 
+        // Reinitialize and reconfigure accelerometer in case it was powered down during sleep
+        accel_init();
+        accel_config();
 
-        accel_cmd_readaccel(&data); 
+        
+        led_value = 127; // Display x-axis value
+        
+        user_run = false; 
+        // user_run = true;
+    } else if (user_state == BT_NOTIF) {
+        // Force active mode to prevent sleep from powering down I2C peripheral
 
-        accel_convert_to_mg(&data, sens); 
+        
+        // Read accelerometer data
+        accel_data_t data;
+        accel_cmd_readaccel(&data);
+        // accel_convert_to_mg(&data, sens);
 
         #if (BLE_CUSTOM1_SERVER)
-            // Update the characteristic value using message-based approach
-            // This is now safe to call repeatedly - it sends a message instead
-            // of directly modifying the database
-            update_accel_data(&data);
+            update_accel_data(&sens, &data); // Send real accelerometer data
+            notify_accel_data(&sens, &data); // notify corresponding devices
         #endif
-
-        // Keep running for continuous updates at 10Hz (every 100ms)
-        // user_run = true; 
         
-        user_run = false; // Single update per button press (safe for testing)
+        
+        user_run = true; // Continuous updates
     } else {
+        // Restore sleep mode after operations complete
+        arch_restore_sleep_mode();
         // stop running if invalid state
         user_run = false; 
     }
@@ -307,7 +315,9 @@ void start_refresh_timer(void)
 }
 
 void start_main_timer(void) {
-    main_timer_hnd = app_easy_timer(100, main_timer_cb);
+    // Timer interval in 10ms units (50 = 500ms, 10 = 100ms, 5 = 50ms)
+    // Safe range: 5-10 (50-100ms) for 10-20Hz update rate
+    main_timer_hnd = app_easy_timer(10, main_timer_cb); // 50ms = 20Hz
 }
 
 static void app_wakeup_cb(void)
@@ -409,10 +419,10 @@ void user_app_on_disconnect(struct gapc_disconnect_ind const *param)
     arch_printf("BLE Disconnected\r\n");
     default_app_on_disconnect(NULL);
 
-    if (main_timer_hnd != EASY_TIMER_INVALID_TIMER) {
-        app_easy_timer_cancel(main_timer_hnd);
-        main_timer_hnd = EASY_TIMER_INVALID_TIMER;
-    }
+    // if (main_timer_hnd != EASY_TIMER_INVALID_TIMER) {
+    //     app_easy_timer_cancel(main_timer_hnd);
+    //     main_timer_hnd = EASY_TIMER_INVALID_TIMER;
+    // }
 
 #if (BLE_BATT_SERVER)
     app_batt_poll_stop();

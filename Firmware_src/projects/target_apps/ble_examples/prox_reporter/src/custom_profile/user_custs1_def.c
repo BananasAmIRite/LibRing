@@ -108,8 +108,14 @@ const struct attm_desc_128 custs1_att_db[CUSTS1_IDX_NB] =
                                             0, 0, NULL},
 
     // Accelerometer Characteristic Value
-    [SVC1_IDX_ACCEL_VAL]         = {SVC1_ACCEL_UUID_128, ATT_UUID_128_LEN, PERM(RD, ENABLE) | PERM(WR, ENABLE) | PERM(WRITE_REQ, ENABLE),
+    [SVC1_IDX_ACCEL_VAL]         = {SVC1_ACCEL_UUID_128, ATT_UUID_128_LEN, PERM(RD, ENABLE) | PERM(WR, ENABLE) | PERM(WRITE_REQ, ENABLE) | PERM(NTF, ENABLE),
                                             DEF_SVC1_ACCEL_CHAR_LEN, 0, NULL},
+
+    // Accelerometer Characteristic NTF CCCD
+    [SVC1_IDX_ACCEL_NTF_CFG]     = {(uint8_t*)&att_desc_cfg,ATT_UUID_16_LEN, PERM(RD, ENABLE) | PERM(WR, ENABLE) | PERM(WRITE_REQ, ENABLE),
+                                       sizeof(uint16_t),
+                                       0,
+                                       NULL},
 
     // Accelerometer Characteristic User Description
     [SVC1_IDX_ACCEL_USER_DESC]   = {(uint8_t*)&att_desc_user_desc, ATT_UUID_16_LEN, PERM(RD, ENABLE),

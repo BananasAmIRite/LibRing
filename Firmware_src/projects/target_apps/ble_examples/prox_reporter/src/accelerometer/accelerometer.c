@@ -3,6 +3,8 @@
 #include "arch_console.h"
 #include <user_periph_setup.h>
 
+#define SC7A20_ADDR 0x18
+
 // I2C configuration for SC7A20
 static const i2c_cfg_t sc7a20_i2c_cfg = {
     .clock_cfg = {
@@ -15,7 +17,7 @@ static const i2c_cfg_t sc7a20_i2c_cfg = {
     .speed = I2C_SPEED_STANDARD,        // 400 kHz
     .mode = I2C_MODE_MASTER,
     .addr_mode = I2C_ADDRESSING_7B,
-    .address = 0x18, // SC7A20 i2c addr
+    .address = SC7A20_ADDR, // SC7A20 i2c addr
     .tx_fifo_level = 4,
     .rx_fifo_level = 4,
 };
@@ -33,6 +35,29 @@ bool accel_init(void) {
     return true; 
 }
 
+// /**
+//  ****************************************************************************************
+//  * @brief   Sets device I2C address.
+//  *
+//  * @param   addr - I2C address
+//  *
+//  * @return  None.
+//  ****************************************************************************************
+// */
+// static void set_dev_addr(uint8_t addr)
+// {
+//   /* The device address can only be set when the controller is disabled */
+//   i2c_set_controller_status(I2C_CONTROLLER_DISABLE);
+//   /* There is a two ic_clk delay when enabling or disabling the controller */
+//   while(i2c_get_controller_status() != I2C_CONTROLLER_DISABLE);
+
+//   i2c_set_target_address(addr);
+
+//   i2c_set_controller_status(I2C_CONTROLLER_ENABLE);
+//   /* There is a two ic_clk delay when enabling or disabling the controller */
+//   while ((i2c_get_controller_status() != I2C_CONTROLLER_ENABLE));
+// }
+
 bool accel_config(void) {
     // config accelerometer
     i2c_abort_t abort_code;
@@ -49,6 +74,7 @@ bool accel_config(void) {
 }
 
 uint8_t accel_cmd_whoami(void) {
+    // set_dev_addr(SC7A20_ADDR); 
     uint8_t whoami_addr = 0x0F; // whoami addr 
     i2c_abort_t abort_code;
     i2c_master_transmit_buffer_sync(&whoami_addr, sizeof(uint8_t), &abort_code, I2C_F_NONE); 
@@ -70,6 +96,9 @@ uint8_t accel_cmd_whoami(void) {
 }
 
 bool accel_cmd_readaccel(accel_data_t *accel_out) {
+
+    // set_dev_addr(SC7A20_ADDR); 
+
     i2c_abort_t abort_code; 
     uint8_t accel_raw[6]; // X_LOW, X_HIGH, Y_LOW, Y_HIGH, Z_LOW, Z_HIGH
     uint8_t addr = 0x28 | 0b10000000; // X_LOW + batch read
@@ -90,6 +119,9 @@ bool accel_cmd_readaccel(accel_data_t *accel_out) {
     int16_t accel_x = (int16_t)((accel_raw[1] << 8) | accel_raw[0]); // X_HIGH concatenated with X_LOW
     int16_t accel_y = (int16_t)((accel_raw[3] << 8) | accel_raw[2]); // Y_HIGH concatenated with U_LOW
     int16_t accel_z = (int16_t)((accel_raw[5] << 8) | accel_raw[4]); // Z_HIGH concatenated with Z_LOW
+
+    // Debug: print raw values to see if Z-axis is actually zero
+    arch_printf("Raw Z bytes: [4]=0x%02X [5]=0x%02X, Z_val=%d\r\n", accel_raw[4], accel_raw[5], accel_z);
 
     accel_out->x = accel_x; 
     accel_out->y = accel_y; 

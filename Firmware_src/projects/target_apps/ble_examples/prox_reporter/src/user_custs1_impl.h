@@ -55,15 +55,15 @@ void user_custs1_wr_ind_handler(ke_msg_id_t const msgid,
  * @param[in] accel_data Pointer to accelerometer data structure (can be NULL for test data)
  ****************************************************************************************
  */
-void update_accel_data(const accel_data_t *accel_data);
+uint8_t update_accel_data(const accel_sensitivity_t* sens, const accel_data_t *accel_data);
 
-// /**
-//  ****************************************************************************************
-//  * @brief Send accelerometer data notification to connected client
-//  * @param[in] accel_data Pointer to accelerometer data structure (can be NULL for test data)
-//  ****************************************************************************************
-//  */
-// void notify_accel_data(const accel_data_t *accel_data);
+/**
+ ****************************************************************************************
+ * @brief Send accelerometer data notification to connected client
+ * @param[in] accel_data Pointer to accelerometer data structure (can be NULL for test data)
+ ****************************************************************************************
+ */
+uint8_t notify_accel_data(const accel_sensitivity_t* sens, const accel_data_t *accel_data); 
 
 #endif
 
