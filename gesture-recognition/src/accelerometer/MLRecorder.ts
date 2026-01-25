@@ -1,11 +1,12 @@
 import { data } from '@tensorflow/tfjs';
-import { prepareData } from '../ml/preprocessing';
+import { prepareClassificationData, prepareData, prepareTrainingData } from '../ml/preprocessing';
 import { AccelDataPoint } from '../plot';
 import { AccelNtfHandler } from './ble';
-import { separateGravityAndLinearAccel } from '../ml/filters';
+import { separateGravityAndLinearAccel, toWorldFrame } from '../ml/filters';
 import { augmentByZRotation } from '../ml/datagen';
 
 export default class DataRecorder {
+    // RAW accel data (needs to be processed)
     private datapoints: { data: AccelDataPoint[]; label: string }[] = [];
     private currentLabel: string = '';
     private neuralNet!: ml5.NeuralNetwork;
@@ -28,16 +29,8 @@ export default class DataRecorder {
 
         // train stuff
 
-        const augmented = this.datapoints.flatMap((e) =>
-            augmentByZRotation(e.data, 8).map((a) => ({ label: e.label, data: a })),
-        );
-
-        console.log('augmented', augmented);
-
-        const preppedData = augmented.map((e) => ({
-            data: prepareData(e.data, this.resampleSize),
-            label: e.label,
-        }));
+        // option 1
+        const preppedData = prepareTrainingData(this.datapoints, this.resampleSize, 'ring-order');
 
         for (const d of preppedData) {
             console.log('added data: ', d.label, d.data);
@@ -72,10 +65,8 @@ export default class DataRecorder {
             if (accumData.length == 0) return;
             console.log(`data: `, accumData);
             // separate gravity and accel for this series of data
-            const separated = separateGravityAndLinearAccel(accumData, 0.8).world;
-            console.log(`Separated: `, separated);
 
-            this.addPoint(separated);
+            this.addPoint(accumData.slice());
 
             console.log(`Total Array: `, this.datapoints);
 
@@ -89,10 +80,8 @@ export default class DataRecorder {
                 if (accumData.length == 0) return;
                 console.log(`data: `, accumData);
                 // separate gravity and accel for this series of data
-                const separated = separateGravityAndLinearAccel(accumData, 0.8).world;
-                console.log(`Separated: `, separated);
 
-                const prepped = prepareData(separated, this.resampleSize);
+                const prepped = prepareClassificationData(accumData, this.resampleSize);
 
                 // clear accumData
                 accumData.splice(0, accumData.length);
@@ -117,5 +106,19 @@ export default class DataRecorder {
 
     public getData() {
         return this.datapoints;
+    }
+
+    public async saveModel() {
+        if (!this.neuralNet) return;
+        // Save model to local downloads
+        await this.neuralNet.save();
+    }
+
+    public async loadModel(files: FileList | string) {
+        if (!this.neuralNet) this.resetNetwork();
+        // If files are provided (from file input), use them, else prompt user
+        if (files) {
+            await this.neuralNet.load(files);
+        }
     }
 }

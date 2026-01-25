@@ -17,6 +17,8 @@ const stopClassifyBtn = document.getElementById('stop-plot-classify');
 // const clearPlotBtn = document.getElementById('clear-plot');
 const mlLabelInput = document.getElementById('ml-label') as HTMLInputElement;
 const trainBtn = document.getElementById('train') as HTMLButtonElement;
+const saveModelBtn = document.getElementById('save-model') as HTMLButtonElement;
+const loadModelBtn = document.getElementById('load-model') as HTMLButtonElement;
 
 connectBtn?.addEventListener('click', () => {
     connectToBLE();
@@ -53,6 +55,25 @@ stopClassifyBtn?.addEventListener('click', async () => {
 
 trainBtn.addEventListener('click', () => {
     recorder.train();
+});
+
+saveModelBtn?.addEventListener('click', () => {
+    recorder.saveModel();
+});
+
+loadModelBtn?.addEventListener('click', () => {
+    console.log('inputting?');
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+
+    input.onchange = (e: any) => {
+        var files = e.target.files;
+
+        recorder.loadModel(files);
+    };
+
+    input.click();
 });
 
 // Utility to display all data points grouped by label

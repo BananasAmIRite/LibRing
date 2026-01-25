@@ -3,7 +3,6 @@ import { AccelDataPoint } from '../plot';
 export type GravitySeparationResult = {
     gravity: AccelDataPoint[];
     linear: AccelDataPoint[];
-    world: AccelDataPoint[];
 };
 
 function normalize(v: { x: number; y: number; z: number }) {
@@ -61,7 +60,6 @@ export function separateGravityAndLinearAccel(data: AccelDataPoint[], alpha: num
         gravityZ = data[0].z;
     const gravity: AccelDataPoint[] = [];
     const linear: AccelDataPoint[] = [];
-    const world: AccelDataPoint[] = [];
 
     for (const point of data) {
         gravityX = alpha * gravityX + (1 - alpha) * point.x;
@@ -80,13 +78,19 @@ export function separateGravityAndLinearAccel(data: AccelDataPoint[], alpha: num
             z: point.z - gravityZ,
             timestamp: point.timestamp,
         });
-        // Rotate linear accel so gravity aligns with (0,0,-1)
-        const rotated = rotateToAlignGravity(
-            { x: point.x - gravityX, y: point.y - gravityY, z: point.z - gravityZ },
-            { x: gravityX, y: gravityY, z: gravityZ },
-        );
-        world.push({ ...rotated, timestamp: point.timestamp });
     }
 
-    return { gravity, linear, world };
+    return { gravity, linear };
+}
+
+/**
+ * Rotates each linear acceleration vector so the corresponding gravity vector aligns with (0,0,-1).
+ * Returns a new array of AccelDataPoint in the world frame.
+ */
+export function toWorldFrame({ linear, gravity }: GravitySeparationResult): AccelDataPoint[] {
+    if (gravity.length !== linear.length) throw new Error('Array lengths must match');
+    return linear.map((vec, i) => {
+        const rotated = rotateToAlignGravity(vec, gravity[i]);
+        return { ...rotated, timestamp: vec.timestamp };
+    });
 }

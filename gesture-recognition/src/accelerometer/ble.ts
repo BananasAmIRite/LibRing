@@ -3,6 +3,7 @@ let server: BluetoothRemoteGATTServer;
 let service: BluetoothRemoteGATTService;
 let characteristic: BluetoothRemoteGATTCharacteristic;
 let accelCharacteristic: BluetoothRemoteGATTCharacteristic;
+let btnCharacteristic: BluetoothRemoteGATTCharacteristic;
 
 export type AccelNtfHandler = (accelData: { x: number; y: number; z: number; timestamp: string }) => void;
 
@@ -11,6 +12,7 @@ let accelNtfHandler: AccelNtfHandler = () => {};
 const serviceUuid = '00112233-4455-6677-8899-aabbccddeeff';
 const characteristicUuid = '2d86686a-53dc-25b3-0c4a-f0e10c8dee20';
 const accelCharacteristicUuid = 'f2909165-4ce5-8da2-4c10-8b38c19f65cc'; // Reversed byte order for BLE
+const btnCharacteristicUuid = '368d553d-154a-1aa8-3f46-2e87b5e5cd54';
 
 const coordValToG = (coord: number, sens: number) => {
     let sensMultiplier = 0;
@@ -59,6 +61,11 @@ function handleAccelNotification(event: any) {
     }
 }
 
+function handleButtonNotification(event: any) {
+    const val = event.target.value;
+    console.log(val.getInt8(0));
+}
+
 export async function connectToBLE() {
     try {
         if (!navigator.bluetooth) {
@@ -103,6 +110,14 @@ export async function connectToBLE() {
 
         // Add event listener for notifications
         accelCharacteristic.addEventListener('characteristicvaluechanged', handleAccelNotification);
+
+        // try to get btn characteristic
+        btnCharacteristic = await service?.getCharacteristic(btnCharacteristicUuid);
+        console.log('Button characteristic found: ', btnCharacteristic?.uuid);
+
+        await btnCharacteristic.startNotifications();
+
+        btnCharacteristic.addEventListener('characteristicvaluechanged', handleButtonNotification);
 
         device.addEventListener('gattserverdisconnected', onDisconnected);
     } catch (error) {

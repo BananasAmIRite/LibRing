@@ -1,4 +1,6 @@
 import { AccelDataPoint } from '../plot';
+import { augmentByXRotation, augmentByZRotation } from './datagen';
+import { toWorldFrame, separateGravityAndLinearAccel } from './filters';
 
 /**
  * Resample a list of AccelDataPoint's to n evenly spaced points (linear interpolation).
@@ -64,4 +66,65 @@ export function flattenData(data: AccelDataPoint[]): number[] {
 
 export function prepareData(d: AccelDataPoint[], resampleSize: number): number[] {
     return flattenData(normalizeAccelData(resampleAccelData(d, resampleSize)));
+}
+
+export type RingOrientationType = 'world-order' | 'ring-order';
+
+export function prepareTrainingData(
+    datapoints: { data: AccelDataPoint[]; label: string }[],
+    resampleSize: number,
+    type: RingOrientationType,
+): { data: number[]; label: string }[] {
+    // world order converts ring data into world frame FIRST, then augments z rotation so that the ring's training is fully orientation-independent
+    if (type == 'world-order') {
+        const worldData = datapoints.map((e) => ({
+            label: e.label,
+            data: toWorldFrame(separateGravityAndLinearAccel(e.data, 0.8)),
+        }));
+
+        const augmented = worldData.flatMap((e) =>
+            augmentByZRotation(e.data, 8).map((a) => ({ label: e.label, data: a })),
+        );
+
+        console.log('augmented', augmented);
+
+        const preppedData = augmented.map((e) => ({
+            data: prepareData(e.data, resampleSize),
+            label: e.label,
+        }));
+
+        return preppedData;
+    } else {
+        // ring order augments the linear component by x rotation (principle ring axis) so that all orientations of acceleration in the y-z plane (the plane of the ring) are accounted for, then converts into world frame to be trained on.
+        // this makes it so the rotation of the ring inside its plane doesn't matter, but the world orientation does matter
+        const linearData = datapoints.map((e) => ({
+            label: e.label,
+            data: separateGravityAndLinearAccel(e.data, 0.8),
+        }));
+
+        const augmentedByX = linearData.flatMap((e) =>
+            augmentByXRotation(e.data.linear, 8).map((a) => ({
+                label: e.label,
+                data: { gravity: e.data.gravity, linear: a },
+            })),
+        );
+
+        const worldFrame = augmentedByX.map((e) => ({
+            label: e.label,
+            data: toWorldFrame(e.data),
+        }));
+
+        const preppedData = worldFrame.map((e) => ({
+            data: prepareData(e.data, resampleSize),
+            label: e.label,
+        }));
+
+        return preppedData;
+    }
+}
+
+export function prepareClassificationData(data: AccelDataPoint[], resampleSize: number) {
+    const world = toWorldFrame(separateGravityAndLinearAccel(data, 0.8));
+
+    return prepareData(world, resampleSize);
 }

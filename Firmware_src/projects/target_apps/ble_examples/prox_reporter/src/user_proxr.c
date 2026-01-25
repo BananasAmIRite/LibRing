@@ -79,6 +79,8 @@ accel_sensitivity_t sens;
 
 static timer_hnd main_timer_hnd = EASY_TIMER_INVALID_TIMER; 
 
+bool btn_send_enabled = false; 
+
 typedef enum {
     DEFAULT,
     ACCEL_INIT,
@@ -211,6 +213,8 @@ static void main_timer_cb(void) {
         bool out = accel_cmd_set_sensitivity(SENS_16G);
      
         led_value = out; 
+
+        btn_send_enabled = true; 
         
         // if (val) {
         //     led_value = 100; 
@@ -359,8 +363,17 @@ static void app_button_press_cb(void)
     app_resume_system_from_sleep();
 
     app_button_enable();
-    if(GPIO_GetPinStatus(GPIO_BUTTON_PORT, GPIO_BUTTON_PIN))
-            return;
+
+    bool pin_val = GPIO_GetPinStatus(GPIO_BUTTON_PORT, GPIO_BUTTON_PIN);
+    #if (BLE_CUSTOM1_SERVER)
+        if (btn_send_enabled) {
+            update_btn_data(pin_val); 
+            notify_btn_data(pin_val);
+        }
+    #endif 
+
+    if (pin_val)
+            return; // only set pressed when button goes from pressed to not pressed
     arch_printf("Button was just pressed\r\n");
 
     if (user_state == DEFAULT && !has_timer_started) {

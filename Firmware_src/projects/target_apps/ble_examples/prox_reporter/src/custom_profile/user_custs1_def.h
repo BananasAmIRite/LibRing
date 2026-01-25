@@ -69,6 +69,12 @@
 
 #define DEF_SVC1_ACCEL_USER_DESC      "Accelerometer Data"
 
+#define DEF_SVC1_BTN_UUID_128       {0x54, 0xcd, 0xe5, 0xb5, 0x87, 0x2e, 0x46, 0x3f, 0xa8, 0x1a, 0x4a, 0x15, 0x3d, 0x55, 0x8d, 0x36}
+
+#define DEF_SVC1_BTN_CHAR_LEN        1
+
+#define DEF_SVC1_BTN_USER_DESC       "Button Pressed"
+
 
 /// Custom1 Service Data Base Characteristic enum
 enum
@@ -84,6 +90,11 @@ enum
     SVC1_IDX_ACCEL_VAL, 
     SVC1_IDX_ACCEL_NTF_CFG,
     SVC1_IDX_ACCEL_USER_DESC,
+
+    SVC1_IDX_BTN_CHAR, 
+    SVC1_IDX_BTN_VAL, 
+    SVC1_IDX_BTN_NTF_CFG, 
+    SVC1_IDX_BTN_USER_DESC,
 
     CUSTS1_IDX_NB
 };
