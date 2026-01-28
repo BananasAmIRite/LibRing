@@ -1,3 +1,4 @@
+import { separateGravityAndLinearAccel } from '../ml/filters';
 import { prepareClassificationData, prepareTrainingData } from '../ml/preprocessing';
 import { AccelDataPoint } from '../plot';
 import { AccelNtfHandler } from './ble';
@@ -10,7 +11,8 @@ export default class DataRecorder {
 
     public constructor(
         private resampleSize: number = 50,
-        private sampleSize: number = 20, // number of actual samples to record over a sliding window on which to classify from
+        private sampleSize: number = 20, // number of actual samples to record over a sliding window on which to classify from,
+        private ignoredAccelMagnitude: number = 0.5, // average accel magnitude for which we ignore the classification
     ) {
         ml5.setBackend('webgpu');
 
@@ -30,6 +32,18 @@ export default class DataRecorder {
 
             if (this.datapoints.length > this.sampleSize) {
                 this.datapoints.shift(); // shift the last element out
+
+                let avgAccelMagn = 0;
+                let cnt = 0;
+
+                for (const d of separateGravityAndLinearAccel(this.datapoints, 0.8).linear) {
+                    avgAccelMagn += Math.hypot(d.x, d.y, d.z);
+                    cnt++;
+                }
+                avgAccelMagn /= cnt;
+
+                if (avgAccelMagn < this.ignoredAccelMagnitude) return; // accel magnitude too small
+
                 const prepped = prepareClassificationData(this.datapoints, this.resampleSize);
 
                 this.neuralNet.classify(prepped, (d) => {
