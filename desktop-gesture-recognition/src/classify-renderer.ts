@@ -1,6 +1,7 @@
 import { connectToBLE, disconnectFromBLE, setNtfHandler } from './lib/shared/accelerometer/ble';
 import { clearAccelPlot, initAccelChart, plotAccelData } from './lib/shared/plot';
 import ClassificationMLRecorder from './lib/classify/ClassificationMLRecorder';
+import { debounce } from './lib/utils';
 
 // Only initialize if classify page is present
 const classifyPage = document.getElementById('page-classify');
@@ -89,10 +90,10 @@ if (classifyPage) {
                     window.electronAPI.incrementSystemVolume(-3);
                     break;
                 case 'horiz-tap':
-                    window.electronAPI.minimizeForegroundWindow();
+                    debounce(1)(() => window.electronAPI.minimizeForegroundWindow());
                     break;
                 case 'vert-tap':
-                    window.electronAPI.maximizeForegroundWindow();
+                    debounce(1)(() => window.electronAPI.maximizeForegroundWindow());
                     break;
                 default:
                     break;
