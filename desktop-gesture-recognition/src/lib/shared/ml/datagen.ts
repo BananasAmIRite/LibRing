@@ -46,3 +46,23 @@ export function augmentByXRotation(data: AccelDataPoint[], n: number): AccelData
     }
     return augmented;
 }
+
+/**
+ * Adds Gaussian noise to the data.
+ * @param data Input data
+ * @param n Number of augmented copies to generate
+ * @param std Standard deviation of noise (relative to signal conceptual magnitude, e.g. 0.05gs)
+ */
+export function augmentByNoise(data: AccelDataPoint[], n: number, std: number = 0.05): AccelDataPoint[][] {
+    const augmented: AccelDataPoint[][] = [];
+    for (let k = 0; k < n; k++) {
+        const noisy = data.map(pt => ({
+            x: pt.x + (Math.random() - 0.5) * 2 * std,
+            y: pt.y + (Math.random() - 0.5) * 2 * std,
+            z: pt.z + (Math.random() - 0.5) * 2 * std,
+            timestamp: pt.timestamp
+        }));
+        augmented.push(noisy);
+    }
+    return augmented;
+}

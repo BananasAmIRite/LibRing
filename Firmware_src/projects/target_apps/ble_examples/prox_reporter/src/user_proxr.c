@@ -79,15 +79,13 @@ accel_sensitivity_t sens;
 
 static timer_hnd main_timer_hnd = EASY_TIMER_INVALID_TIMER; 
 
-bool btn_send_enabled = false; 
-
 typedef enum {
     DEFAULT,
     ACCEL_INIT,
-    ACCEL_CONFIG, 
-    ACCEL_SENS, 
-    WHOAMI, 
-    DISP_INFO, 
+    // ACCEL_CONFIG, 
+    // ACCEL_SENS, 
+    // WHOAMI, 
+    // DISP_INFO, 
     BT_INIT, 
     BT_NOTIF, 
     NUM_STATES
@@ -193,64 +191,66 @@ static void main_timer_cb(void) {
         // default nothing state
         LED_GPIO_mode(0);
         user_run = false; 
-    } else if (user_state == ACCEL_INIT) {
+    }
+     else if (user_state == ACCEL_INIT) {
         LED_GPIO_mode(1);
-        bool val = accel_init(); 
+        bool accel_init_out = accel_init(); 
 
-        if (val) {
-            led_value = 1;
-        } else {
-            led_value = 11; 
-        } 
+        bool accel_cfg_out = accel_config(); 
+
+        bool accel_set_sens_out = accel_cmd_set_sensitivity(SENS_16G);
+        
+        accel_cmd_get_sensitivity(&sens); 
+
+        // if (accel_init_out) {
+        //     led_value = 1;
+        // } else {
+        //     led_value = 11; 
+        // } 
+        led_value = (accel_init_out << 2) | (accel_cfg_out << 1) | accel_set_sens_out;
         
         // stop after running once
         user_run = false; 
-    } else if (user_state == ACCEL_CONFIG) {
-        LED_GPIO_mode(1);
-
-        bool val = accel_config(); 
-
-        bool out = accel_cmd_set_sensitivity(SENS_16G);
-     
-        led_value = out; 
-
-        btn_send_enabled = true; 
+    }
+    //  else if (user_state == ACCEL_CONFIG) {
+    //     LED_GPIO_mode(1);
         
-        // if (val) {
-        //     led_value = 100; 
-        // } else {
-        //     led_value = 9; 
-        // }
+    //     // if (val) {
+    //     //     led_value = 100; 
+    //     // } else {
+    //     //     led_value = 9; 
+    //     // }
         
-        user_run = false; 
-    } else if (user_state == ACCEL_SENS) {
+    //     user_run = false; 
+    // } else if (user_state == ACCEL_SENS) {
 
-        accel_cmd_get_sensitivity(&sens); 
 
-        led_value = sens; 
-        user_run = false; 
-    } else if (user_state == WHOAMI) {
-        // user_run = false;
-        LED_GPIO_mode(1); 
-        uint8_t whoami_out = accel_cmd_whoami(); 
+    //     led_value = sens; 
+    //     user_run = false; 
+    // } else if (user_state == WHOAMI) {
+    //     // user_run = false;
+    //     LED_GPIO_mode(1); 
+    //     uint8_t whoami_out = accel_cmd_whoami(); 
         
-        led_value = whoami_out; 
+    //     led_value = whoami_out; 
 
-        user_run = false; 
-    } else if (user_state == DISP_INFO) {
-        // led_value = 1; 
-        LED_GPIO_mode(1);
+    //     user_run = false; 
+    // }
+    //  else if (user_state == DISP_INFO) {
+    //     // led_value = 1; 
+    //     LED_GPIO_mode(1);
 
-        accel_data_t data; 
+    //     accel_data_t data; 
 
-        bool out = accel_cmd_readaccel(&data); 
+    //     bool out = accel_cmd_readaccel(&data); 
 
-        accel_convert_to_mg(&data, sens); 
+    //     accel_convert_to_mg(&data, sens); 
 
-        led_value = abs(data.y); 
-        // led_value = out; 
-        // user_run = false; 
-    } else if (user_state == BT_INIT) {
+    //     led_value = abs(data.y); 
+    //     // led_value = out; 
+    //     // user_run = false; 
+    // }
+     else if (user_state == BT_INIT) {
         
         // // Skip accelerometer reads - just send test data
         // accel_data_t data; 
@@ -270,13 +270,10 @@ static void main_timer_cb(void) {
         accel_config();
 
         
-        led_value = 127; // Display x-axis value
-        
         user_run = false; 
         // user_run = true;
     } else if (user_state == BT_NOTIF) {
         // Force active mode to prevent sleep from powering down I2C peripheral
-
         
         // Read accelerometer data
         accel_data_t data;
@@ -366,10 +363,10 @@ static void app_button_press_cb(void)
 
     bool pin_val = GPIO_GetPinStatus(GPIO_BUTTON_PORT, GPIO_BUTTON_PIN);
     #if (BLE_CUSTOM1_SERVER)
-        if (btn_send_enabled) {
-            update_btn_data(pin_val); 
-            notify_btn_data(pin_val);
-        }
+        // if (btn_send_enabled) {
+        update_btn_data(pin_val); 
+        notify_btn_data(pin_val);
+        // }
     #endif 
 
     if (pin_val)

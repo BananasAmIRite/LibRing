@@ -371,7 +371,7 @@ function handleAccelNotification(event) {
         const reading = { x, y, z };
 
         // Process the single reading through the stateful filter
-        const processed = separateGravityAcceleration(reading, 0.8);
+        const processed = separateGravityAcceleration(reading, 0.99);
 
         const timestamp = new Date().toLocaleTimeString();
 
@@ -416,10 +416,13 @@ function handleAccelNotification(event) {
         linearChart.update('none');
         worldChart.update('none');
 
-        // Update 3D visualization with rotated linear acceleration (gravity subtracted)
+        // Update 3D visualization with gravity and linear acceleration in device frame
         if (window.RingVisualization) {
             window.RingVisualization.updateOrientation(processed.gravity);
-            window.RingVisualization.updatePosition(processed.world); // Pass rotated linear acceleration
+            window.RingVisualization.updatePosition({
+                gravity: processed.gravity,
+                linear: processed.linear,
+            }); // Pass both vectors in device coordinates
         }
 
         console.log(`Raw: X: ${x.toFixed(2)}, Y: ${y.toFixed(2)}, Z: ${z.toFixed(2)}`);
@@ -431,9 +434,6 @@ function handleAccelNotification(event) {
         );
         console.log(
             `World: X: ${processed.world.x.toFixed(2)}, Y: ${processed.world.y.toFixed(2)}, Z: ${processed.world.z.toFixed(2)}`,
-        );
-        console.log(
-            `WorldRaw (viz): X: ${processed.worldRaw.x.toFixed(2)}, Y: ${processed.worldRaw.y.toFixed(2)}, Z: ${processed.worldRaw.z.toFixed(2)}`,
         );
     } catch (error) {
         console.error('Error processing accelerometer notification:', error);

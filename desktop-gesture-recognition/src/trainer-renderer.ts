@@ -3,6 +3,10 @@
 import { connectToBLE, disconnectFromBLE, setNtfHandler } from './lib/shared/accelerometer/ble';
 import { AccelChart } from './lib/shared/plot';
 import MLRecorder from './lib/train/TrainingMLRecorder';
+import { CircleDetector } from './lib/shared/detection/circleDetection';
+import { TapDetector } from './lib/shared/detection/tapDetection';
+import { separateGravityAndLinearAccel } from './lib/shared/ml/filters';
+import { resampleAccelData } from './lib/shared/ml/preprocessing';
 
 const trainPage = document.getElementById('page-train');
 if (trainPage) {
@@ -17,6 +21,8 @@ if (trainPage) {
     const plotBtn = document.getElementById('train-plot');
     const stopPlotBtn = document.getElementById('train-stop-plot');
     const stopClassifyBtn = document.getElementById('train-stop-plot-classify');
+    const stopCircleBtn = document.getElementById('train-stop-plot-circle');
+    const stopTapBtn = document.getElementById('train-stop-plot-tap');
     const mlLabelInput = document.getElementById('train-ml-label') as HTMLInputElement;
     const trainBtn = document.getElementById('train-train') as HTMLButtonElement;
     const saveModelBtn = document.getElementById('train-save-model') as HTMLButtonElement;
@@ -51,6 +57,16 @@ if (trainPage) {
         setNtfHandler((a) => {});
         displayClassificationResult(val);
         console.log(val);
+    });
+
+    stopCircleBtn?.addEventListener('click', async () => {
+        await handlers.stopAndClassifyWith('circle');
+        setNtfHandler((a) => {});
+    });
+
+    stopTapBtn?.addEventListener('click', async () => {
+        await handlers.stopAndClassifyWith('tap');
+        setNtfHandler((a) => {});
     });
 
     trainBtn?.addEventListener('click', () => {

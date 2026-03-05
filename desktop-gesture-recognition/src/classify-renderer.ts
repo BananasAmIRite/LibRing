@@ -1,7 +1,7 @@
 import { connectToBLE, disconnectFromBLE, setNtfHandler } from './lib/shared/accelerometer/ble';
 import { AccelChart } from './lib/shared/plot';
 import ClassificationMLRecorder, { ClassifyHandlerData } from './lib/classify/ClassificationMLRecorder';
-import { GestureHandler } from './lib/classify/GestureHandler';
+// import { GestureHandler } from './lib/classify/GestureHandler';
 
 // Only initialize if classify page is present
 const classifyPage = document.getElementById('page-classify');
@@ -12,61 +12,64 @@ if (classifyPage) {
     const handlers = recorder.getMLRecorderNtfHandler();
 
     // Initialize GestureHandler with registered gestures
-    const gestureHandler = new GestureHandler();
+    // const gestureHandler = new GestureHandler();
 
-    // Register gestures with their configurations
-    gestureHandler.registerGesture('circle-cw', {
-        mode: 'continuous',
-        cooldownMs: 100, // Rate limit volume changes
-        minConfidence: 0.7,
-        onTrigger: () => {
-            window.electronAPI.incrementSystemVolume(0.03);
-        },
-        onEnd: () => {
-            console.log('Circle CW gesture ended');
-        },
-    });
+    // // Register gestures with their configurations
+    // gestureHandler.registerGesture('circle-cw', {
+    //     mode: 'continuous',
+    //     cooldownMs: 100, // Rate limit volume changes
+    //     minConfidence: 0.7,
+    //     onTrigger: () => {
+    //         // window.electronAPI.incrementSystemVolume(0.03);
+    //         console.log('Circle CW gesture started');
+    //     },
+    //     onEnd: () => {
+    //         console.log('Circle CW gesture ended');
+    //     },
+    // });
 
-    gestureHandler.registerGesture('circle-ccw', {
-        mode: 'continuous',
-        cooldownMs: 100,
-        minConfidence: 0.7,
-        onTrigger: () => {
-            window.electronAPI.incrementSystemVolume(-0.03);
-        },
-        onEnd: () => {
-            console.log('Circle CCW gesture ended');
-        },
-    });
+    // gestureHandler.registerGesture('circle-ccw', {
+    //     mode: 'continuous',
+    //     cooldownMs: 100,
+    //     minConfidence: 0.7,
+    //     onTrigger: () => {
+    //         console.log('Circle CCW gesture started');
+    //         // window.electronAPI.incrementSystemVolume(-0.03);
+    //     },
+    //     onEnd: () => {
+    //         console.log('Circle CCW gesture ended');
+    //     },
+    // });
 
-    gestureHandler.registerGesture('horiz-tap', {
-        mode: 'discrete',
-        cooldownMs: 500, // Prevent accidental double-taps
-        minConfidence: 0.85, // Higher threshold for discrete actions
-        onTrigger: () => {
-            console.log('horiz tap');
-            window.electronAPI.minimizeForegroundWindow();
-        },
-    });
+    // gestureHandler.registerGesture('double-tap', {
+    //     mode: 'discrete',
+    //     cooldownMs: 500, // Prevent accidental double-taps
+    //     minConfidence: 0.85, // Higher threshold for discrete actions
+    //     onTrigger: () => {
+    //         console.log('double tap');
+    //         // window.electronAPI.minimizeForegroundWindow();
+    //     },
+    // });
 
-    gestureHandler.registerGesture('vert-tap', {
-        mode: 'discrete',
-        cooldownMs: 500,
-        minConfidence: 0.85,
-        onTrigger: () => {
-            window.electronAPI.maximizeForegroundWindow();
-        },
-    });
+    // gestureHandler.registerGesture('vert-tap', {
+    //     mode: 'discrete',
+    //     cooldownMs: 500,
+    //     minConfidence: 0.85,
+    //     onTrigger: () => {
+    //         console.log('vert tap');
+    //         // window.electronAPI.maximizeForegroundWindow();
+    //     },
+    // });
 
     // Register idle to reset state when no gesture detected
-    gestureHandler.registerGesture('idle', {
-        mode: 'discrete',
-        cooldownMs: 0,
-        minConfidence: 0,
-        onTrigger: () => {
-            gestureHandler.handleIdle();
-        },
-    });
+    // gestureHandler.registerGesture('idle', {
+    //     mode: 'discrete',
+    //     cooldownMs: 0,
+    //     minConfidence: 0,
+    //     onTrigger: () => {
+    //         gestureHandler.handleIdle();
+    //     },
+    // });
 
     const connectBtn = document.getElementById('classify-connect') as HTMLButtonElement;
     const disconnectBtn = document.getElementById('classify-disconnect') as HTMLButtonElement;
@@ -130,11 +133,31 @@ if (classifyPage) {
         input.click();
     });
 
+    let lastDoubleTap = Date.now();
+    let doubleTapConfirm = false;
+
     function handleClassificationResult({ results, segment }: ClassifyHandlerData) {
         if (!results || results.length === 0) return;
 
         // Pass to gesture handler for validation and action triggering
-        gestureHandler.handleClassification(results, segment);
+        // gestureHandler.handleClassification(results, segment);
+        const highest = results[0].label;
+        console.log(highest);
+
+        if (highest === 'circle-cw') {
+            window.electronAPI.incrementSystemVolume(0.03);
+        } else if (highest === 'circle-ccw') {
+            window.electronAPI.incrementSystemVolume(-0.03);
+        } else if (highest === 'double-tap' && Date.now() - lastDoubleTap > 500) {
+            if (doubleTapConfirm) {
+                window.electronAPI.minimizeForegroundWindow();
+                doubleTapConfirm = false;
+            } else {
+                doubleTapConfirm = true;
+            }
+            // window.electronAPI.setSystemVolume(100);
+            lastDoubleTap = Date.now();
+        }
 
         // Display results for debugging
         displayClassificationResult(results);
@@ -159,8 +182,8 @@ if (classifyPage) {
         }
 
         // Show active gesture status
-        const activeGesture = gestureHandler.getActiveGesture();
-        const activeDuration = gestureHandler.getActiveGestureDuration();
+        // const activeGesture = gestureHandler.getActiveGesture();
+        // const activeDuration = gestureHandler.getActiveGestureDuration();
 
         // Modern Bootstrap progress bar display for results (no sorting)
         if (Array.isArray(result) && result.length && result[0].label && result[0].confidence !== undefined) {
@@ -168,9 +191,9 @@ if (classifyPage) {
             let html = '';
 
             // Show active gesture indicator if present
-            if (activeGesture) {
-                html += `<div class="alert alert-success py-1 mb-2">Active: <strong>${activeGesture}</strong> (${(activeDuration / 1000).toFixed(1)}s)</div>`;
-            }
+            // if (activeGesture) {
+            //     html += `<div class="alert alert-success py-1 mb-2">Active: <strong>${activeGesture}</strong> (${(activeDuration / 1000).toFixed(1)}s)</div>`;
+            // }
 
             result.forEach((item, idx) => {
                 const isMax = item.label === maxLabel;

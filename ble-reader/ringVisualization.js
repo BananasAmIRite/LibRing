@@ -1,7 +1,7 @@
 // Three.js Ring Visualization in World Frame
 // This file handles the 3D visualization of the ring's orientation
 
-let scene, camera, renderer, accelArrow;
+let scene, camera, renderer, gravityArrow, linearArrow;
 let visualizationActive = false;
 
 /**
@@ -46,19 +46,30 @@ function initRingVisualization() {
     worldAxes.position.set(0, 0, 0);
     scene.add(worldAxes);
 
-    // Add labels for world axes
+    // Add labels for device axes
     addAxisLabels();
 
-    // Add acceleration vector indicator (initially pointing up)
-    accelArrow = new THREE.ArrowHelper(
-        new THREE.Vector3(0, 1, 0), // Initial direction (will be updated)
+    // Add gravity vector indicator (red arrow)
+    gravityArrow = new THREE.ArrowHelper(
+        new THREE.Vector3(0, -1, 0), // Initial direction (down for gravity)
         new THREE.Vector3(0, 0, 0), // Origin
         1, // Initial length (will be updated)
-        0x00ff00, // Green color
+        0xff0000, // Red color for gravity
         0.3,
         0.2,
     );
-    scene.add(accelArrow);
+    scene.add(gravityArrow);
+
+    // Add linear acceleration vector indicator (green arrow)
+    linearArrow = new THREE.ArrowHelper(
+        new THREE.Vector3(0, 1, 0), // Initial direction (will be updated)
+        new THREE.Vector3(0, 0, 0), // Origin
+        1, // Initial length (will be updated)
+        0x00ff00, // Green color for linear acceleration
+        0.3,
+        0.2,
+    );
+    scene.add(linearArrow);
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
@@ -71,24 +82,24 @@ function initRingVisualization() {
 }
 
 /**
- * Add text labels for axes (simplified version)
+ * Add text labels for axes (device coordinate system)
  */
 function addAxisLabels() {
     // Create small spheres to indicate axis endpoints
     const labelMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const labelGeometry = new THREE.SphereGeometry(0.05);
 
-    // X axis (red)
+    // X axis (red) - device X
     const xLabel = new THREE.Mesh(labelGeometry, new THREE.MeshBasicMaterial({ color: 0xff0000 }));
     xLabel.position.set(2.2, 0, 0);
     scene.add(xLabel);
 
-    // Y axis (green)
+    // Y axis (green) - device Y  
     const yLabel = new THREE.Mesh(labelGeometry, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
     yLabel.position.set(0, 2.2, 0);
     scene.add(yLabel);
 
-    // Z axis (blue)
+    // Z axis (blue) - device Z
     const zLabel = new THREE.Mesh(labelGeometry, new THREE.MeshBasicMaterial({ color: 0x0000ff }));
     zLabel.position.set(0, 0, 2.2);
     scene.add(zLabel);
@@ -132,38 +143,54 @@ function updateRingOrientation(gravity) {
 }
 
 /**
- * Update arrow to show linear acceleration vector (gravity subtracted, rotated to world frame)
- * @param {Object} linearAccel - Linear acceleration in world frame {x, y, z}
+ * Update arrows to show gravity and linear acceleration vectors in device frame
+ * @param {Object} vectors - Object containing {gravity: {x,y,z}, linear: {x,y,z}}
  */
-function updateRingPosition(linearAccel) {
-    if (!accelArrow || !linearAccel) return;
+function updateRingPosition(vectors) {
+    if (!gravityArrow || !linearArrow || !vectors) return;
 
-    console.log('Updating arrow with:', linearAccel); // Debug log
+    console.log('Updating arrows with:', vectors); // Debug log
 
-    // Create acceleration vector in Three.js coordinates
-    // Map raw accelerometer coordinates to Three.js (adjust based on your sensor orientation)
-    const accelVec = new THREE.Vector3(linearAccel.x, linearAccel.z, linearAccel.y);
+    // Update gravity arrow (red)
+    if (vectors.gravity) {
+        const gravityVec = new THREE.Vector3(vectors.gravity.x, vectors.gravity.z, vectors.gravity.y);
+        const gravityMag = gravityVec.length();
 
-    const accelMagnitude = accelVec.length();
+        console.log('Gravity magnitude:', gravityMag); // Debug log
 
-    console.log('Acceleration magnitude:', accelMagnitude); // Debug log
+        if (gravityMag > 0.01) {
+            const gravityDirection = gravityVec.clone().normalize();
+            gravityArrow.position.set(0, 0, 0);
+            gravityArrow.setDirection(gravityDirection);
+            gravityArrow.setLength(gravityMag * 2, 0.3, 0.2); // Scale by 2 for visibility
+            gravityArrow.visible = true;
+            
+            console.log('Gravity arrow visible, direction:', gravityDirection, 'length:', gravityMag * 2); // Debug log
+        } else {
+            gravityArrow.visible = false;
+            console.log('Gravity arrow hidden - magnitude too small'); // Debug log
+        }
+    }
 
-    // Always show the arrow, even for small magnitudes
-    if (accelMagnitude > 0.01) {
-        // Normalize direction
-        const direction = accelVec.clone().normalize();
+    // Update linear acceleration arrow (green)
+    if (vectors.linear) {
+        const linearVec = new THREE.Vector3(vectors.linear.x, vectors.linear.z, vectors.linear.y);
+        const linearMag = linearVec.length();
 
-        // Update arrow from origin
-        accelArrow.position.set(0, 0, 0);
-        accelArrow.setDirection(direction);
-        accelArrow.setLength(accelMagnitude * 2, 0.3, 0.2); // Scale by 2 for visibility
-        accelArrow.visible = true;
+        console.log('Linear acceleration magnitude:', linearMag); // Debug log
 
-        console.log('Arrow visible, direction:', direction, 'length:', accelMagnitude * 2); // Debug log
-    } else {
-        // Hide arrow when acceleration is negligible
-        accelArrow.visible = false;
-        console.log('Arrow hidden - magnitude too small'); // Debug log
+        if (linearMag > 0.01) {
+            const linearDirection = linearVec.clone().normalize();
+            linearArrow.position.set(0, 0, 0);
+            linearArrow.setDirection(linearDirection);
+            linearArrow.setLength(linearMag * 2, 0.3, 0.2); // Scale by 2 for visibility
+            linearArrow.visible = true;
+            
+            console.log('Linear arrow visible, direction:', linearDirection, 'length:', linearMag * 2); // Debug log
+        } else {
+            linearArrow.visible = false;
+            console.log('Linear arrow hidden - magnitude too small'); // Debug log
+        }
     }
 }
 
@@ -171,8 +198,11 @@ function updateRingPosition(linearAccel) {
  * Reset visualization
  */
 function resetRingPosition() {
-    if (accelArrow) {
-        accelArrow.visible = false;
+    if (gravityArrow) {
+        gravityArrow.visible = false;
+    }
+    if (linearArrow) {
+        linearArrow.visible = false;
     }
 }
 
@@ -201,7 +231,8 @@ function disposeRingVisualization() {
     scene = null;
     camera = null;
     renderer = null;
-    accelArrow = null;
+    gravityArrow = null;
+    linearArrow = null;
 
     console.log('Ring visualization disposed');
 }

@@ -98,6 +98,12 @@
                             <button class="btn btn-warning" id="train-stop-plot-classify">
                                 Stop Recording (Classify)
                             </button>
+                            <button class="btn btn-info" id="train-stop-plot-circle">
+                                Stop Recording (Circle Detect)
+                            </button>
+                            <button class="btn btn-secondary" id="train-stop-plot-tap">
+                                Stop Recording (Tap Detect)
+                            </button>
                         </div>
                         <div class="mb-3 d-flex gap-2 flex-wrap justify-content-center">
                             <button class="btn btn-info" id="train-train">Train</button>
@@ -173,7 +179,8 @@
             integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
             crossorigin="anonymous"
         ></script>
-        <script src="https://unpkg.com/ml5@1/dist/ml5.min.js"></script>
+        <!-- <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script> -->
+        <!-- <script src="https://unpkg.com/ml5@1/dist/ml5.min.js"></script> -->
         <!-- Your TypeScript entry (Vite will handle this) -->
         <script type="module" src="/src/classify-renderer.ts"></script>
         <script type="module" src="/src/trainer-renderer.ts"></script>
