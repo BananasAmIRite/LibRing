@@ -33,6 +33,8 @@
 #include "custs1_task.h"
 #include "user_custs1_impl.h"
 
+#include "fluid/fluid_5x25.h"
+
 
 #if defined(__IS_SDK6_COMPILER_GCC__) && !defined(__clang__)
 #pragma message("Please note that SDK6 GCC support will be deprecated in the next SDK6 release")
@@ -61,6 +63,9 @@ static led_gpios theLedGpiosHigh[] = {
 
 uint8_t LED_Buffer[6] = {0x00,0x00,0x00,0x00,0x00,0x00};
 
+// Persistent 5x25 fluid simulation state
+static fluid_5x25_t g_fluid;
+
 uint32_t counter_time = 0;
 uint8_t counter_ms = 0;
 uint8_t current_line = 0;
@@ -87,6 +92,8 @@ typedef enum {
     // WHOAMI, 
     // DISP_INFO, 
     BT_INIT, 
+    
+    FLUID_MODE, 
     BT_NOTIF, 
     NUM_STATES
 } user_state_t;
@@ -147,9 +154,51 @@ void refreshMenu()
         if((counter_time%2)==0)
                 LED_Buffer[2] = 0x48;*/
 
-        // uint8_t whoami = accel_cmd_whoami();
+        // --- Fluid display ---
+        // Step the simulation with explicit normalized forces in [0,1].
+        if (user_state == FLUID_MODE) {
+            accel_data_t a;
+            accel_cmd_readaccel(&a);
+            accel_convert_to_mg(&a, sens);
 
-        LED_Buff_setInt(led_value, LED_Buffer, 5);
+            // Map accelerometer X into left_0_1 using two observed calibration poses (mg):
+            //   left=0 -> x ~= -700
+            //   left=1 -> x ~= 1400
+            // left_0_1 = clamp01((x - x_lo) / (x_hi - x_lo))
+            const int16_t x_lo = -700;
+            const int16_t x_hi =  1400;
+            const float denom_x = (float)(x_hi - x_lo);
+            float left_0_1 = 0.50f;
+            if (denom_x != 0.0f) {
+                left_0_1 = ((float)a.x - (float)x_lo) / denom_x;
+            }
+            if (left_0_1 < 0.0f) left_0_1 = 0.0f;
+            if (left_0_1 > 1.0f) left_0_1 = 1.0f;
+
+            // Map accelerometer Z into down_0_1 using two observed calibration poses (mg):
+            //   down=1 -> z ~= -560
+            //   down=0 -> z ~= 1268
+            // down_0_1 = clamp01((z_hi - z) / (z_hi - z_lo))
+            const int16_t z_lo = -560;
+            const int16_t z_hi =  1268;
+            const float denom_z = (float)(z_hi - z_lo);
+            float down_0_1 = 0.50f;
+            if (denom_z != 0.0f) {
+                down_0_1 = ((float)z_hi - (float)a.z) / denom_z;
+            }
+            if (down_0_1 < 0.0f) down_0_1 = 0.0f;
+            if (down_0_1 > 1.0f) down_0_1 = 1.0f;
+
+            fluid_5x25_step(&g_fluid, left_0_1, down_0_1);
+
+            // LED driver expects 5 segment bytes.
+            fluid_5x25_to_segments(&g_fluid, LED_Buffer);
+
+            // Keep the 6th byte unused/zero.
+            LED_Buffer[5] = 0x00;
+        } else {
+            LED_Buff_setInt(led_value, LED_Buffer, 5);
+        }
 }
 
 static void timer_cb(void)
@@ -211,6 +260,31 @@ static void main_timer_cb(void) {
         
         // stop after running once
         user_run = false; 
+    }
+    else if (user_state == FLUID_MODE) {
+        LED_GPIO_mode(1);
+
+        // Expose a compact debug view of the fluid state over the accel notification:
+        // x = bitmask of y=0..7 for grid x=0
+        // y = bitmask of y=0..7 for grid x=1
+        // z = bitmask of y=0..7 for grid x=2
+        // accel_data_t data;
+        // data.x = 0;
+        // data.y = 0;
+        // data.z = 0;
+
+        // for (int yy = 0; yy < 8; yy++) {
+        //     if (fluid_5x25_get(&g_fluid, 0, yy) != 0) data.x |= (1u << yy);
+        //     if (fluid_5x25_get(&g_fluid, 1, yy) != 0) data.y |= (1u << yy);
+        //     if (fluid_5x25_get(&g_fluid, 2, yy) != 0) data.z |= (1u << yy);
+        // }
+
+        // #if (BLE_CUSTOM1_SERVER)
+        //     update_accel_data(&sens, &data);
+        //     notify_accel_data(&sens, &data);
+        // #endif
+
+        user_run = false;
     }
     //  else if (user_state == ACCEL_CONFIG) {
     //     LED_GPIO_mode(1);
@@ -350,9 +424,12 @@ void user_app_on_init(void)
 {
 
      default_app_on_init();
-    //  start_main_timer();
+     //  start_main_timer();
      arch_printf("Booted now\r\n");
      LED_GPIO_mode(0);
+
+     // Initialize fluid simulation once at boot
+     fluid_5x25_init(&g_fluid);
 }
 
 static void app_button_press_cb(void)

@@ -521,6 +521,11 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>user_app/fluid</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>user_app/custom_profile</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
@@ -599,6 +604,16 @@
 			<name>user_app/accelerometer/accelerometer.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/src/accelerometer/accelerometer.h</locationURI>
+		</link>
+		<link>
+			<name>user_app/fluid/fluid_5x25.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/fluid/fluid_5x25.c</locationURI>
+		</link>
+		<link>
+			<name>user_app/fluid/fluid_5x25.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/src/fluid/fluid_5x25.h</locationURI>
 		</link>
 		<link>
 			<name>user_app/custom_profile/user_custs1_def.c</name>
