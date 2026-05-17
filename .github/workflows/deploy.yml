@@ -21,14 +21,13 @@ jobs:
               uses: actions/setup-node@v4
               with:
                   node-version: 20
-                  cache: npm
 
             #
             # Build app1
             #
             - name: Install dependencies (gesture-recognition-demo)
               working-directory: gesture-recognition-demo
-              run: npm ci
+              run: npm install
 
             - name: Build gesture-recognition-demo
               working-directory: gesture-recognition-demo
@@ -39,7 +38,7 @@ jobs:
             #
             - name: Install dependencies (sleep-recognition-demo)
               working-directory: sleep-recognition-demo
-              run: npm ci
+              run: npm install
 
             - name: Build sleep-recognition-demo
               working-directory: sleep-recognition-demo
