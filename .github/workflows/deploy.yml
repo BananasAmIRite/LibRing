@@ -45,17 +45,6 @@ jobs:
               run: npm run build
 
             #
-            # Build app3
-            #
-            - name: Install dependencies (perlin)
-              working-directory: perlin
-              run: npm install
-
-            - name: Build perlin
-              working-directory: perlin
-              run: npm run build
-
-            #
             # Prepare deploy directory
             #
             - name: Create deploy structure
@@ -69,7 +58,7 @@ jobs:
               run: |
                   cp -r gesture-recognition-demo/dist/* deploy/gesture-recognition-demo/
                   cp -r sleep-recognition-demo/dist/* deploy/sleep-recognition-demo/
-                  cp -r perlin/dist/* deploy/perlin/
+                  cp -r perlin/* deploy/perlin/
 
             #
             # Deploy to gh-pages branch
