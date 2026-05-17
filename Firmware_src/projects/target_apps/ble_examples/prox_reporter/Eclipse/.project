@@ -543,7 +543,7 @@
 		<link>
 			<name>user_app/main.c</name>
 			<type>1</type>
-			<location>C:/Users/jason/Documents/Coding/research/urop-smart-ring/ATC_SR08_Ring-ai/Firmware_src/projects/target_apps/ble_examples/prox_reporter/src/user_proxr.c</location>
+			<location>PARENT-1-PROJECT_LOC/src/user_proxr.c</location>
 		</link>
 		<link>
 			<name>user_app/user_custs1_impl.c</name>
